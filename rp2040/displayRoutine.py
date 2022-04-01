@@ -56,6 +56,8 @@ pk_logo = bytearray([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7f, 0xf8,
                      0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
                      0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
 
+custom = bytearray([])
+
 
 def horizCenter(text: str, y: int, color: int):
     pad = 64 - (len(text) * 4)
@@ -71,6 +73,11 @@ def updateWiFiSignal(level: int):
 def updateSensors(sensors: dict):
     global SENSORS
     SENSORS = sensors
+
+
+def updateCustomImage(image: bytearray):
+    global custom
+    custom = image
 
 
 def changeState(state: int):
@@ -106,6 +113,13 @@ def stateConnectionLost():
     display.show()
 
 
+def stateCustomPicture():
+    display.fill(0)
+
+    frame = framebuf.FrameBuffer(custom, 128, 64, framebuf.MONO_HLSB)
+    display.blit(frame, 0, 0, 0)
+
+
 def drawWiFi():
     frame = framebuf.FrameBuffer(wifi[WIFI_SIGNAL], 8, 8, framebuf.MONO_VLSB)
     display.blit(frame, 120, 0, 0)
@@ -136,6 +150,8 @@ def refresh(timer):
         stateConnectionLost()
     elif DISPLAY_STATE == 2:
         stateWorking()
+    elif DISPLAY_STATE == 50:
+        stateCustomPicture()
     else:
         stateIdle()
 
