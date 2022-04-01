@@ -121,7 +121,7 @@ def createRequest(request):
 
 
 led = Pin(25, Pin.OUT)
-uart0 = UART(0, baudrate=9600, tx=Pin(0), rx=Pin(
+uart0 = UART(0, baudrate=19200, tx=Pin(0), rx=Pin(
     1), timeout_char=10, timeout=1000, parity=0, rxbuf=2048)
 uart1 = UART(1, baudrate=9600, tx=Pin(4), rx=Pin(
     5), timeout_char=10, timeout=1000, parity=0, rxbuf=2048)
