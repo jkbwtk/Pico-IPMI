@@ -110,7 +110,7 @@ def translateSignalPower(power: int):
         return 1
 
 
-uart = UART(0, baudrate=9600, timeout=5000, parity=0)
+uart = UART(0, baudrate=19200, timeout=5000, parity=0, rxbuf=2048)
 wlan = network.WLAN(network.STA_IF)
 client_id = ubinascii.hexlify(machine.unique_id())
 
@@ -122,15 +122,20 @@ def sub_cb(topic, msg):
         uart.write(createRequest(COMM_POWER))
     elif msg == b'reset':
         uart.write(createRequest(COMM_RESET))
+    elif msg == b'getSensors':
+        uart.write(createRequest(GET_SENSORS))
 
 
 counter = 0
+MQTT_BACKOFF = 0
+LOOP_TIME = 1
+
 
 uart.read()
 c = MQTTClient(client_id, 'localhost', keepalive=60)
 c.set_callback(sub_cb)
 c.connect()
-c.subscribe(b"pico")
+c.subscribe(b"pico_in")
 # print(getSignalPower(wlan))
 
 while True:
@@ -150,10 +155,18 @@ while True:
                 print('Signal:', signal, 'Translated:', translated)
                 packet = packData(WIFI_DATA, 'i', translated)
                 uart.write(packet)
+            elif data[0] == SENSOR_DATA:
+                # print(packet)
+                c.publish(b'pico_out', packet)
 
         except Exception as e:
             print(e)
             print('Corrupted packet:', packet)
 
     c.check_msg()
-    time.sleep_ms(100)
+
+    if MQTT_BACKOFF == 0:
+        c.ping()
+
+    MQTT_BACKOFF = (MQTT_BACKOFF + 1) % ((1000 // LOOP_TIME) * 5)
+    time.sleep_ms(LOOP_TIME)
