@@ -184,6 +184,7 @@ def fetchSensors(timer):
     global UART0_WRITING
     global UART0_HEARTBEAT_COUNTER
     global UART0_WORKING_FLAG
+    global UART0_BACKOFF
 
     if UART0_WORKING_FLAG and not UART0_WRITING:
         UART0_WRITING = True
@@ -196,6 +197,7 @@ def fetchSensors(timer):
             UART0_WORKING_FLAG = False
             print('Lost connection with host')
             display.changeState(1)
+            UART0_BACKOFF = 1
 
 
 def fetchWiFi(timer):
@@ -244,6 +246,7 @@ while True:
                 print('Synced config file')
                 display.changeState(2)
                 UART0_WORKING_FLAG = True
+                UART0_HEARTBEAT_COUNTER = 0
             elif data[0] == UPDATE_CONFIG:
                 UART0_WORKING_FLAG = False
             elif data[0] == PONG:
