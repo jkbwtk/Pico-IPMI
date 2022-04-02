@@ -7,6 +7,7 @@ import winreg
 import serial
 import yaml
 
+
 TEST_DATA = 00
 SENSOR_DATA = 11
 CONFIG_DATA = 12
@@ -208,7 +209,7 @@ uart = serial.Serial('COM5', baudrate=19200, timeout=0.01,
 
 config = loadConfig()
 # convertJSON(config)
-
+LOOP_TIME = 1
 
 uart.read_all()  # flush system buffer
 uart.write(createRequest(UPDATE_CONFIG))
@@ -237,4 +238,4 @@ while True:
         except Exception as e:
             print(e)
 
-    time.sleep(0.1)
+    time.sleep(LOOP_TIME / 1000)
