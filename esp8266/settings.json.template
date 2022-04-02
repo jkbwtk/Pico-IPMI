@@ -1,0 +1,11 @@
+{
+  "MQTT": {
+    "ip": "localhost",
+    "login": "login",
+    "password": "password"
+  },
+  "Wi-Fi": {
+    "name": "name",
+    "password": "password"
+  }
+}

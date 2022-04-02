@@ -7,6 +7,7 @@ import time
 import ubinascii
 from umqtt.simple import MQTTClient
 import machine
+import json
 
 
 TEST_DATA = 00
@@ -49,6 +50,14 @@ def readLine(uart: UART):
             continue
 
         return buffer
+
+
+def loadConfig():
+    file = open('settings.json', 'r', encoding='utf-8')
+    data: dict[str, dict] = json.load(file)  # type: ignore
+    file.close()
+
+    return data
 
 
 def packData(opcode: int, packetFormat: str, *data):
@@ -104,7 +113,7 @@ def translateSignalPower(power: int):
         return 0
     elif power > -50:
         return 3
-    elif power > - 80:
+    elif power > - 70:
         return 2
     else:
         return 1
@@ -130,9 +139,10 @@ counter = 0
 MQTT_BACKOFF = 0
 LOOP_TIME = 1
 
-
+settings = loadConfig()
 uart.read()
-c = MQTTClient(client_id, 'localhost', keepalive=60)
+c = MQTTClient(client_id, settings['mqtt']['ip'], user=settings['mqtt']
+               ['login'], password=settings['mqtt']['password'], keepalive=60)
 c.set_callback(sub_cb)
 c.connect()
 c.subscribe(b"pico_in")
