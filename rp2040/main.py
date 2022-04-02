@@ -117,7 +117,7 @@ def createRequest(request):
 led = Pin(25, Pin.OUT)
 uart0 = UART(0, baudrate=19200, tx=Pin(0), rx=Pin(
     1), timeout_char=10, timeout=1000, parity=0, rxbuf=2048)
-uart1 = UART(1, baudrate=9600, tx=Pin(4), rx=Pin(
+uart1 = UART(1, baudrate=19200, tx=Pin(4), rx=Pin(
     5), timeout_char=10, timeout=1000, parity=0, rxbuf=2048)
 relay1 = Pin(22, Pin.OUT)
 relay2 = Pin(21, Pin.OUT)
@@ -219,11 +219,14 @@ def fetchWiFi(timer):
 
 
 config = {}
+rawSensorsPacket = b''
+
+LOOP_TIME = 1
 SHBTMR = Timer()
 WIFIHBTMR = Timer()
 
 SHBTMR.init(freq=1 / 2, mode=Timer.PERIODIC, callback=fetchSensors)
-WIFIHBTMR.init(freq=1 / 5, mode=Timer.PERIODIC, callback=fetchWiFi)
+WIFIHBTMR.init(freq=1 / 10, mode=Timer.PERIODIC, callback=fetchWiFi)
 
 
 while True:
@@ -239,6 +242,7 @@ while True:
             if data[0] == SENSOR_DATA:
                 # printData(parseSensorData(data, config), config)
                 display.updateSensors(parseSensorData(data, config))
+                rawSensorsPacket = packet
                 UART0_HEARTBEAT_COUNTER = 0
             elif data[0] == CONFIG_DATA:
                 config = json.loads(data[2])
@@ -275,8 +279,11 @@ while True:
                 relay1.high()
             elif data[0] == COMM_RESET:
                 relay2.low()
-                sleep_ms(100)
+                sleep_ms(200)
                 relay2.high()
+            elif data[0] == GET_SENSORS:
+                print(rawSensorsPacket)
+                uart1.write(rawSensorsPacket)
 
         except Exception as e:
             print(e)
@@ -296,6 +303,6 @@ while True:
         uart1.write(createRequest(GET_WIFI))
         UART1_WRITING = False
 
-    UART0_BACKOFF = (UART0_BACKOFF + 1) % 50
-    UART1_BACKOFF = (UART1_BACKOFF + 1) % 50
-    time.sleep_ms(100)
+    UART0_BACKOFF = (UART0_BACKOFF + 1) % ((1000 // LOOP_TIME) * 5)
+    UART1_BACKOFF = (UART1_BACKOFF + 1) % ((1000 // LOOP_TIME) * 5)
+    time.sleep_ms(LOOP_TIME)
