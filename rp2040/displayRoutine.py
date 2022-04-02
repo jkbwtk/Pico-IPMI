@@ -32,6 +32,15 @@ def horizCenter(text: str, y: int, color: int):
     display.text(text, pad, y, color)
 
 
+def centeredImage(image: tuple):
+    frame = framebuf.FrameBuffer(
+        bytearray(image[2]), image[0], image[1], framebuf.MONO_HLSB)
+    padX = (128 - image[0]) // 2
+    padY = (64 - image[1]) // 2
+
+    display.blit(frame, padX, padY, 0)
+
+
 def updateWiFiSignal(level: int):
     global WIFI_SIGNAL, SCREEN_UPDATED
     WIFI_SIGNAL = level % len(graphics.get('wifi'))
@@ -55,9 +64,7 @@ def changeState(state: int):
 
 def stateIdle():
     pk_logo = graphics.get('pk_logo')
-    frame = framebuf.FrameBuffer(
-        bytearray(pk_logo[2]), pk_logo[0], pk_logo[1], framebuf.MONO_HLSB)
-    display.blit(frame, 32, 0, 0)
+    centeredImage(pk_logo)
 
 
 def stateConnecting():
