@@ -26,12 +26,6 @@ PONG = 99
 PACKET_STOP = b'\0m]X]X]'
 
 
-wifi_1 = bytearray([192, 192, 0, 0, 0, 0, 0, 0])
-wifi_2 = bytearray([200, 200, 8, 16, 224, 0, 0, 0])
-wifi_3 = bytearray([201, 201, 9, 17, 227, 2, 14, 248])
-wifi = [wifi_1, wifi_2, wifi_3]
-
-
 def loadConfig():
     file = open('sensors.json', 'r', encoding='utf-8')
     data: dict[str, dict] = json.load(file)  # type: ignore
@@ -220,25 +214,6 @@ def fetchWiFi(timer):
             UART1_WORKING_FLAG = False
             print('Lost connection with Wi-Fi module')
             display.updateWiFiSignal(0)
-
-
-def heartBeat(timer):
-    led.toggle()
-    global UART0_WRITING
-    global UART0_HEARTBEAT_COUNTER
-    global UART0_WORKING_FLAG
-
-    if UART0_WORKING_FLAG:
-        UART0_WRITING = True
-        uart0.write(createRequest(PING))
-        UART0_WRITING = False
-
-        UART0_HEARTBEAT_COUNTER += 1
-
-        if UART0_HEARTBEAT_COUNTER > 5:
-            UART0_WORKING_FLAG = False
-            print('Lost connection with host')
-            display.changeState(1)
 
 
 config = {}

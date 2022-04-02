@@ -1,7 +1,7 @@
 import time
 from ssd1306 import SSD1306_I2C
 import framebuf
-from machine import I2C, Pin, Timer
+from machine import I2C, Pin, Timer, freq
 import bmpParser as bmp
 
 
@@ -13,6 +13,8 @@ WIFI_SIGNAL = 0
 SENSORS = {}
 
 
+# freq(240_000_000)
+# print('Changed cpu freq to {} Mhz'.format(freq() // 1_000_000))
 i2c = I2C(0, scl=Pin(17), sda=Pin(16), freq=200000)
 display = SSD1306_I2C(128, 64, i2c)
 
@@ -139,4 +141,4 @@ def refresh(timer):
 
 refresh(-1)
 timer = Timer()
-timer.init(freq=.5, mode=Timer.PERIODIC, callback=refresh)
+timer.init(freq=5, mode=Timer.PERIODIC, callback=refresh)
