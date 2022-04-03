@@ -13,7 +13,7 @@ WIFI_SIGNAL = 0
 SENSORS = {}
 
 
-# freq(240_000_000)
+# freq(260_000_000)
 # print('Changed cpu freq to {} Mhz'.format(freq() // 1_000_000))
 i2c = I2C(0, scl=Pin(17), sda=Pin(16), freq=200000)
 display = SSD1306_I2C(128, 64, i2c)
@@ -22,7 +22,7 @@ display.fill(0)
 display.contrast(0)
 
 t1 = time.ticks_ms()
-graphics = bmp.loadGraphics('graphics/')
+graphics = bmp.loadJSONGraphics('graphics.json')
 t2 = time.ticks_ms()
 print('Graphics loaded in:', time.ticks_diff(t2, t1), 'ms')
 
@@ -139,6 +139,10 @@ def refresh(timer):
     display.show()
 
 
+t1 = time.ticks_ms()
 refresh(-1)
+t2 = time.ticks_ms()
+print('Frame presented in:', time.ticks_diff(t2, t1), 'ms')
+
 timer = Timer()
 timer.init(freq=5, mode=Timer.PERIODIC, callback=refresh)
