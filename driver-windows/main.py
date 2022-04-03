@@ -203,8 +203,7 @@ def createRequest(request):
 reg = winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER)
 key = winreg.OpenKey(reg, 'SOFTWARE\\HWiNFO64\\VSB')
 
-uart = serial.Serial('COM5', baudrate=19200, timeout=0.01,
-                     parity=serial.PARITY_EVEN)
+uart = serial.Serial('COM5', baudrate=38400, timeout=0.01)
 
 
 config = loadConfig()

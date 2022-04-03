@@ -115,10 +115,10 @@ def createRequest(request):
 
 
 led = Pin(25, Pin.OUT)
-uart0 = UART(0, baudrate=19200, tx=Pin(0), rx=Pin(
-    1), timeout_char=10, timeout=1000, parity=0, rxbuf=2048)
-uart1 = UART(1, baudrate=19200, tx=Pin(4), rx=Pin(
-    5), timeout_char=10, timeout=1000, parity=0, rxbuf=2048)
+uart0 = UART(0, baudrate=38400, tx=Pin(0), rx=Pin(
+    1), timeout=1000, rxbuf=2048)
+uart1 = UART(1, baudrate=38400, tx=Pin(4), rx=Pin(
+    5), timeout=1000, rxbuf=2048)
 relay1 = Pin(22, Pin.OUT)
 relay2 = Pin(21, Pin.OUT)
 

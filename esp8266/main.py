@@ -119,7 +119,7 @@ def translateSignalPower(power: int):
         return 1
 
 
-uart = UART(0, baudrate=19200, timeout=5000, parity=0, rxbuf=2048)
+uart = UART(0, baudrate=38400, timeout=5000, rxbuf=2048)
 wlan = network.WLAN(network.STA_IF)
 client_id = ubinascii.hexlify(machine.unique_id())
 
@@ -156,7 +156,6 @@ while True:
 
         try:
             data = unpackData(packet)
-            print(data)
 
             if data[0] == GET_WIFI:
                 signal = getSignalPower(wlan)
