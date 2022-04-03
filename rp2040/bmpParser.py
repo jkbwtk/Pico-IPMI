@@ -1,3 +1,4 @@
+import json
 import math
 import os
 import re as regex
@@ -84,7 +85,7 @@ def parseWindowsBMP(filename, type: int):
     return (width, height, [bank for line in vlsb for bank in line])
 
 
-def loadGraphics(dir: str) -> dir:
+def loadGraphics(dir: str) -> dict:
     animMatcher = regex.compile(r'^(.*)_(\d+)$')
     graphics = {}
 
@@ -103,3 +104,81 @@ def loadGraphics(dir: str) -> dir:
                 graphics[name] = parseWindowsBMP(dir + filename, HLSB)
 
     return graphics
+
+
+def convertToBin(file: str):
+    data = parseWindowsBMP(file, HLSB)
+
+    name = file[:-4] + '.bin'
+
+    binFile = open(name, 'wb')
+
+    binFile.write(data[0].to_bytes(2, 'little'))
+    binFile.write(data[1].to_bytes(2, 'little'))
+
+    for bank in data[2]:
+        binFile.write(bank.to_bytes(1, 'little'))
+
+    binFile.close()
+
+
+def loadBin(file: str):
+    file = open(file, 'rb')
+
+    width = readShort(file)
+    height = readShort(file)
+
+    data = file.read(width * height)
+
+    file.close()
+
+    return (width, height, data)
+
+
+def optimiseGraphics(dir: str):
+    for filename in os.listdir(dir):
+        if filename.endswith(".bmp"):
+            convertToBin(dir + filename)
+
+
+def loadOptimisedGraphics(dir: str) -> dict:
+    animMatcher = regex.compile(r'^(.*)_(\d+)$')
+    graphics = {}
+
+    for filename in os.listdir(dir):
+        if filename.endswith(".bin"):
+            name = filename[:-4]
+
+            if animMatcher.match(name):
+                animName = animMatcher.match(name).group(1)
+                if animName not in graphics:
+                    graphics[animName] = []
+
+                graphics[animName].append(
+                    loadBin(dir + filename))
+            else:
+                graphics[name] = loadBin(dir + filename)
+
+    return graphics
+
+
+def saveJSON(file: str, data: dict[str, dict]):
+    file = open(file, 'w', encoding='utf-8')
+
+    conv = json.dumps(data)
+    file.write(conv)
+
+    file.close()
+
+
+def convertToJson(file: str, dir: str):
+    data = loadGraphics(dir)
+    saveJSON(file, data)
+
+
+def loadJSONGraphics(file: str) -> dict:
+    file = open(file, 'r', encoding='utf-8')
+    data: dict[str, dict] = json.load(file)  # type: ignore
+    file.close()
+
+    return data
