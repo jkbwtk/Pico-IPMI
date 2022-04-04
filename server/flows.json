@@ -1,0 +1,202 @@
+[
+    {
+        "id": "f6f2187d.f17ca8",
+        "type": "tab",
+        "label": "Pico IPMI",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "aee16a630b82e53d",
+        "type": "mqtt out",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "pico_in",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "2aa6df7aa9390592",
+        "x": 860,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "13596334f5e13679",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "reset",
+        "payloadType": "str",
+        "x": 650,
+        "y": 280,
+        "wires": [
+            [
+                "aee16a630b82e53d"
+            ]
+        ]
+    },
+    {
+        "id": "4ca912904190c155",
+        "type": "debug",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 870,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "0ea317ec17d49a99",
+        "type": "mqtt in",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "pico_out",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "2aa6df7aa9390592",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 660,
+        "y": 400,
+        "wires": [
+            [
+                "4ca912904190c155"
+            ]
+        ]
+    },
+    {
+        "id": "986036d2d10887ac",
+        "type": "mqtt out",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "pico_in",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "2aa6df7aa9390592",
+        "x": 860,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "b57cfcee08207ee0",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "power",
+        "payloadType": "str",
+        "x": 650,
+        "y": 220,
+        "wires": [
+            [
+                "986036d2d10887ac"
+            ]
+        ]
+    },
+    {
+        "id": "2377da5032560c97",
+        "type": "mqtt out",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "pico_in",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "2aa6df7aa9390592",
+        "x": 860,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "62bea030c6246c6c",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "getSensors",
+        "payloadType": "str",
+        "x": 630,
+        "y": 340,
+        "wires": [
+            [
+                "2377da5032560c97"
+            ]
+        ]
+    },
+    {
+        "id": "2aa6df7aa9390592",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "mosquitto",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "sessionExpiry": ""
+    }
+]
