@@ -1,0 +1,63 @@
+{
+  "cpu_usage": [
+    "Total CPU Usage"
+  ],
+  "cpu_temp": [
+    "CPU (Tctl/Tdie)",
+    "CPU Package"
+  ],
+  "cpu_power": [
+    "CPU Package Power"
+  ],
+  "cpu_fan": [
+    "CPU 1"
+  ],
+  "ram_used": [
+    "Physical Memory Used"
+  ],
+  "ram_freq": [
+    "Memory Clock"
+  ],
+  "bclk": [
+    "Bus Clock"
+  ],
+  "_net_up": [
+    "Current UP rate"
+  ],
+  "_net_dl": [
+    "Current DL rate"
+  ],
+  "batt_level": [
+    "Charge Level"
+  ],
+  "batt_charge": [
+    "Charge Rate"
+  ],
+  "batt_time": [
+    "Estimated Remaining Time"
+  ],
+  "_drive_read": [
+    "Read Rate"
+  ],
+  "_drive_write": [
+    "Write Rate"
+  ],
+  "_smart_temp": [
+    "Drive Temperature"
+  ],
+  "_smart_life": [
+    "Drive Remaining Life"
+  ],
+  "_smart_warning": [
+    "Drive Warning"
+  ],
+  "_smart_failure": [
+    "Drive Failure"
+  ],
+  "_smart_reads": [
+    "Total Host Reads"
+  ],
+  "_smart_writes": [
+    "Total Host Writes"
+  ]
+}
