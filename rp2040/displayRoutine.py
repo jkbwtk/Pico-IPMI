@@ -73,7 +73,7 @@ def stateConnecting():
     global COUNTER
 
     horizCenter('Syncing', 17, 1)
-    horizCenter('Config File', 27, 1)
+    horizCenter('With Host', 27, 1)
     display.text('.' * (COUNTER % 4), 52, 37, 1)
 
 
@@ -110,9 +110,9 @@ def drawSensors():
     display.text('CPU: {}C'.format(SENSORS.get('cpu_temp', -1)), 0, 9, 1)
     display.text('CPU: {}W'.format(SENSORS.get('cpu_power', -1)), 0, 18, 1)
     display.text('RAM: {}MB'.format(SENSORS.get('ram_used', -1)), 0, 27, 1)
-    display.text('GPU: {}%'.format(SENSORS.get('gpu_usage', -1)), 0, 36, 1)
-    display.text('GPU: {}C'.format(SENSORS.get('gpu_temp', -1)), 0, 45, 1)
-    display.text('GPU: {}W'.format(SENSORS.get('gpu_power', -1)), 0, 54, 1)
+    display.text('RAM: {}MHz'.format(SENSORS.get('ram_freq', -1)), 0, 36, 1)
+    display.text('GPU: {}%'.format(SENSORS.get('gpu0_usage', -1)), 0, 45, 1)
+    display.text('GPU: {}C'.format(SENSORS.get('gpu0_temp', -1)), 0, 54, 1)
 
 
 def stateWorking():

@@ -1,171 +1,26 @@
 import json
-import math
-import struct
 import time
+from shared.sensors import parseSensors
 
 from machine import UART, Pin, Timer
+from shared.opcodes import COMM_POWER, COMM_RESET, GET_SENSORS, GET_SYSINFO, GET_WIFI, PONG, SENSOR_DATA, SYSINFO_DATA, SYSINFO_OK, UPDATE_SYSINFO, WIFI_DATA
+from shared.packets import createRequest, packDataAuto, unpackData
+from shared.uart import readLine
+from shared.utils import getHash, loadJSON, saveJSON
 from utime import sleep_ms
 
 import displayRoutine as display
 
-TEST_DATA = 00
-SENSOR_DATA = 11
-CONFIG_DATA = 12
-WIFI_DATA = 13
-
-GET_CONFIG = 1
-UPDATE_CONFIG = 2
-GET_SENSORS = 3
-GET_WIFI = 4
-
-COMM_POWER = 50
-COMM_RESET = 51
-
-PING = 66
-PONG = 99
-PACKET_STOP = b'\0m]X]X]'
-
-
-def loadConfig():
-    file = open('sensors.json', 'r', encoding='utf-8')
-    data: dict[str, dict] = json.load(file)  # type: ignore
-    file.close()
-
-    return data
-
-
-def saveConfig(data: str):
-    file = open('sensors.json', 'w', encoding='utf-8')
-
-    file.write(data)
-
-    file.close()
-
-
-def unpackDataOld(packet, config: dict[str, dict]):
-    data = {}
-    packetFormat = ''
-
-    for name, sensor in sorted(config.items()):
-        valueType = sensor['type']
-        packetFormat += valueType
-
-    rawData = struct.unpack(packetFormat, packet)
-    i = 2
-
-    for name, sensor in sorted(config.items()):
-        data[name] = rawData[i]
-        i += 1
-
-    return data
-
-
-def unpackData(packet):
-    # print(packet)
-    opcode = packet[0]
-    headerSize = int(packet[2:packet.find(b's')])
-    header = packet[1:headerSize + 1].decode()
-    data = struct.unpack(header, packet[:-len(PACKET_STOP)])
-
-    # print('Opcode', opcode)
-    # print('Header Size', headerSize)
-    # print('Header', header)
-    # print('Data', data)
-
-    return data
-
-
-def packData(opcode: int, packetFormat: str, *data):
-    HEADER_SIZE = len(packetFormat) + 2
-    HEADER_SIZE += math.floor(math.log10(HEADER_SIZE)) + 1
-    packetFormat = 'B{}s'.format(HEADER_SIZE) + packetFormat
-
-    print(packetFormat)
-    header = bytearray(packetFormat, encoding='utf-8')
-    packet = struct.pack(packetFormat, opcode, header, *data)
-
-    return packet + PACKET_STOP
-
-
-def parseSensorData(data, config):
-    sensorData = {}
-    i = 2
-
-    for name, sensor in sorted(config.items()):
-        sensorData[name] = data[i]
-        i += 1
-
-    return sensorData
-
-
-def printData(data: dict, config: dict[str, dict]):
-    for name, value in sorted(data.items()):
-        sensor = config[name]
-        fullName = sensor['name']
-        unit = sensor['unit']
-
-        print('{}: {} {}'.format(fullName, value, unit))
-
-
-def createRequest(request):
-    packetFormat = 'B3s'
-    header = bytearray(packetFormat)
-
-    return struct.pack(packetFormat, request, header) + PACKET_STOP
 
 
 led = Pin(25, Pin.OUT)
-uart0 = UART(0, baudrate=38400, tx=Pin(0), rx=Pin(
-    1), timeout=1000, rxbuf=2048)
-uart1 = UART(1, baudrate=38400, tx=Pin(4), rx=Pin(
-    5), timeout=1000, rxbuf=2048)
+uart0 = UART(0, baudrate=38400, tx=Pin(0), rx=Pin(1), timeout=1000, rxbuf=2048)
+uart1 = UART(1, baudrate=38400, tx=Pin(4), rx=Pin(5), timeout=1000, rxbuf=2048)
 relay1 = Pin(22, Pin.OUT)
 relay2 = Pin(21, Pin.OUT)
 
 relay1.high()
 relay2.high()
-
-
-def readLine(uart: UART):
-    firstLoop = True
-    buffer = b''
-
-    while True:
-        packet: bytes | None = uart.read(1)
-        if packet == None:
-            if firstLoop:
-                return False
-
-            firstLoop = False
-            continue
-
-        buffer += packet
-        if not buffer.endswith(PACKET_STOP):
-            continue
-
-        return buffer
-
-
-def updateConfig(UART0_WORKING_FLAG):
-    while not UART0_WORKING_FLAG:
-        try:
-            uart0.write(createRequest(GET_CONFIG))
-
-            packet = uart0.readline()
-            if packet == None:
-                raise Exception
-
-            data = unpackData(packet)
-            if data[0] == CONFIG_DATA:
-                config = json.loads(data[2])
-                saveConfig(data[2])
-            else:
-                continue
-
-            UART0_WORKING_FLAG = True
-        except:
-            print('Host is unresponsive')
-            time.sleep(5)
 
 
 UART0_HEARTBEAT_COUNTER = 0
@@ -218,13 +73,16 @@ def fetchWiFi(timer):
             display.updateWiFiSignal(0)
 
 
-config = {}
+sysInfo = loadJSON('sysInfo.json')
+hash = getHash(sysInfo)
+
 rawSensorsPacket = b''
 
 LOOP_TIME = 1
 SHBTMR = Timer()
 WIFIHBTMR = Timer()
 
+time.sleep(2)
 SHBTMR.init(freq=1 / 2, mode=Timer.PERIODIC, callback=fetchSensors)
 WIFIHBTMR.init(freq=1 / 10, mode=Timer.PERIODIC, callback=fetchWiFi)
 
@@ -240,19 +98,35 @@ while True:
             data = unpackData(packet)
 
             if data[0] == SENSOR_DATA:
-                # printData(parseSensorData(data, config), config)
-                display.updateSensors(parseSensorData(data, config))
-                rawSensorsPacket = packet
-                UART0_HEARTBEAT_COUNTER = 0
-            elif data[0] == CONFIG_DATA:
-                config = json.loads(data[2])
-                saveConfig(data[2])
-                print('Synced config file')
+                if data[-1] != hash:
+                    uart0.write(packDataAuto(GET_SYSINFO, hash))
+                    UART0_HEARTBEAT_COUNTER = 0
+                else:
+                    display.updateSensors(parseSensors(data, sysInfo))
+                    rawSensorsPacket = packet
+                    UART0_HEARTBEAT_COUNTER = 0
+            elif data[0] == SYSINFO_DATA:
+                sysInfo = json.loads(data[2])
+                saveJSON('sysInfo.json', data[2])
+                hash = getHash(sysInfo)
+                print('Synced sysInfo file')
                 display.changeState(2)
                 UART0_WORKING_FLAG = True
                 UART0_HEARTBEAT_COUNTER = 0
-            elif data[0] == UPDATE_CONFIG:
-                UART0_WORKING_FLAG = False
+            elif data[0] == UPDATE_SYSINFO:
+                if data[2] != hash:
+                    UART0_WORKING_FLAG = False
+                    UART0_BACKOFF = 0
+                else:
+                    print('Valid sysInfo')
+                    UART0_WORKING_FLAG = True
+                    UART0_HEARTBEAT_COUNTER = 0
+                    display.changeState(2)
+            elif data[0] == SYSINFO_OK:
+                UART0_WORKING_FLAG = True
+                print('Valid sysInfo')
+                display.changeState(2)
+                UART0_HEARTBEAT_COUNTER = 0
             elif data[0] == PONG:
                 UART0_HEARTBEAT_COUNTER = 0
         except Exception as e:
@@ -290,11 +164,11 @@ while True:
             print('Corrupted packet:', packet)
 
     if not UART0_WORKING_FLAG and UART0_BACKOFF == 0:
-        print('Syncing config file')
+        print('Syncing sysInfo')
         display.changeState(0)
 
         UART0_WRITING = True
-        uart0.write(createRequest(GET_CONFIG))
+        uart0.write(packDataAuto(GET_SYSINFO, hash))
         UART0_WRITING = False
 
     if not UART1_WORKING_FLAG and UART1_BACKOFF == 0:
