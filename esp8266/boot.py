@@ -9,10 +9,11 @@ esp.osdebug(None)
 
 button = Pin(16, Pin.IN)
 led = Pin(2, Pin.OUT, value=1)
-
+FLASH_MODE = False
 
 if button.value() == 0:
   led.value(0)
+  FLASH_MODE = True
 else:
   led.value(1)
   uos.dupterm(None, 1)
