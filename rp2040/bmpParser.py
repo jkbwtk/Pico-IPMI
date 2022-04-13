@@ -62,7 +62,7 @@ def parseWindowsBMP(filename, type: int):
             headPos += bankSize
 
             for _ in range(bankSize):
-                scanline.append(file.read(1))
+                scanline.append(reverseColor(file.read(1)))
 
             file.read(MAXBANKSIZE - bankSize)
 
