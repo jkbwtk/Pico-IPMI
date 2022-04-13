@@ -1,0 +1,34 @@
+{
+  "name": "pico-ipmi-emulator",
+  "version": "1.0.0",
+  "description": "Fake MQTT client simulating IPMI module",
+  "main": "build/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "npx eslint --fix ./src/**/*.ts",
+    "start": "node .",
+    "watch": "npx tsc --watch",
+    "build": "npx tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Seviter/Pico-IPMI.git"
+  },
+  "author": "Seviter",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Seviter/Pico-IPMI/issues"
+  },
+  "homepage": "https://github.com/Seviter/Pico-IPMI#readme",
+  "dependencies": {
+    "ajv": "^8.11.0",
+    "mqtt": "^4.3.7"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.19.0",
+    "@typescript-eslint/parser": "^5.19.0",
+    "eslint": "^8.13.0",
+    "eslint-config-google": "^0.14.0",
+    "typescript": "^4.6.3"
+  }
+}
