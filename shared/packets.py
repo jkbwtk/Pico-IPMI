@@ -33,11 +33,12 @@ def packDataAuto(opcode: int, *data):
         if t == float:
             packetFormat += 'f'
         elif t == int:
-            packetFormat += 'i'
+            if d < 256 and d >= 0:
+                packetFormat += 'B'
+            else:
+                packetFormat += 'i'
         elif t == bool:
             packetFormat += 'h'
-        elif t == str and len(d) == 1:
-            packetFormat += 'B'
         else:
             packetFormat += f'{len(d)}s'
 
