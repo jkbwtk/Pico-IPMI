@@ -1,0 +1,37 @@
+{
+  "mqtt": {
+    "ip": "localhost",
+    "login": "login",
+    "password": "password"
+  },
+  "hosts": [
+    {
+      "arch": "ARCH_NAME",
+      "cpuCores": -1,
+      "cpuName": "CPU_NAME",
+      "cpuThreads": -1,
+      "drives": [
+        {
+          "name": "DRIVE_NAME"
+        },
+        {
+          "name": "DRIVE_NAME"
+        }
+      ],
+      "gpus": [
+        {
+          "name": "GPU_NAME",
+          "vram": -1
+        }
+      ],
+      "name": "HOST_NAME",
+      "networkInterfaces": [
+        {
+          "name": "NIC_NAME"
+        }
+      ],
+      "os": "OS_NAME",
+      "ramTotal": -1
+    }
+  ]
+}

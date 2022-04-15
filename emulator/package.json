@@ -8,7 +8,8 @@
     "lint": "npx eslint --fix ./src/**/*.ts",
     "start": "node .",
     "watch": "npx tsc --watch",
-    "build": "npx tsc"
+    "build": "npm run convert && npx tsc",
+    "convert": "npx tsc && node ./build/opcodesConverter"
   },
   "repository": {
     "type": "git",
@@ -21,10 +22,13 @@
   },
   "homepage": "https://github.com/Seviter/Pico-IPMI#readme",
   "dependencies": {
+    "@types/node": "^17.0.23",
     "ajv": "^8.11.0",
-    "mqtt": "^4.3.7"
+    "mqtt": "^4.3.7",
+    "python-struct": "^1.1.3"
   },
   "devDependencies": {
+    "@types/python-struct": "^1.0.0",
     "@typescript-eslint/eslint-plugin": "^5.19.0",
     "@typescript-eslint/parser": "^5.19.0",
     "eslint": "^8.13.0",
