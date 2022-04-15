@@ -1,3 +1,6 @@
+server/config/
+
+opcodes.ts
 tsconfig.tsbuildinfo
 
 build/

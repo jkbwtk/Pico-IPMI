@@ -45,3 +45,5 @@ rules:
   "@typescript-eslint/semi": "error"
   "@typescript-eslint/explicit-module-boundary-types":
     ["warn", { allowArgumentsExplicitlyTypedAsAny: true }]
+  quote-props: ["warn", "as-needed"]
+  array-bracket-newline: ["warn", "consistent"]
