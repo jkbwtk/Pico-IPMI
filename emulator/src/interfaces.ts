@@ -33,7 +33,7 @@ export interface SensorAliases {
 }
 
 export interface Sensors {
-  [key: string]: number | string;
+  [key: string]: number;
 }
 
 export interface MQTTSettings {

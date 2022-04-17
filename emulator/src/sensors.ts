@@ -2,10 +2,10 @@ import { Host, SensorAliases, Sensors } from './interfaces';
 import { join } from 'path';
 import { loadJSON, padLeft } from './utils';
 
-const aliases: SensorAliases = loadJSON(join(__dirname, '..', '..', 'shared', 'sensorAliases.json'));
+export const aliases: SensorAliases = loadJSON(join(__dirname, '..', '..', 'shared', 'sensorAliases.json'));
 
 
-export const parseSensors = (data: number[] | string[], sysInfo: Host): Sensors => {
+export const parseSensors = (data: number[], sysInfo: Host): Sensors => {
   const l = data.slice(2);
 
   const d: Sensors = {};

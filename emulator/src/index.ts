@@ -11,5 +11,5 @@ for (const host of config.hosts) {
   const module = new Module(host, config.mqtt);
   modules.set(hash(host.name), module);
 
-  console.log(`Created: ${host.name}(${hash(host.name)})`);
+  console.log(`Created: ${module.name}`);
 }

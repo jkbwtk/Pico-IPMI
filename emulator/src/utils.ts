@@ -20,6 +20,10 @@ export const hash = (data: string): string => {
   return hash.digest('hex').substring(0, 6);
 };
 
+export const hashInt = (seed: number | string): number => {
+  return parseInt(hash(`${seed}`), 16);
+};
+
 export const padLeft = (val: number, len: number, pad: string): string => {
   let s = val.toString();
 
@@ -28,4 +32,20 @@ export const padLeft = (val: number, len: number, pad: string): string => {
   }
 
   return s;
+};
+
+export const clamp = (min: number, max: number, val: number): number => {
+  if (val < min) return min;
+  if (val > max) return max;
+  return val;
+};
+
+export const clampFloor = (floor: number, val: number): number => {
+  if (val < floor) return floor;
+  return val;
+};
+
+export const clampCeil = (ceil: number, val: number): number => {
+  if (val > ceil) return ceil;
+  return val;
 };
