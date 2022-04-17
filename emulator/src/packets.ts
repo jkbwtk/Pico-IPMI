@@ -21,6 +21,12 @@ export const packDataAuto = (opcode: number, ...data: unknown[]): Buffer => {
       if (d % 1 === 0) {
         if (d < 256 && d >= 0) {
           packetFormat += 'B';
+        } else if (d < 127 && d >= -128) {
+          packetFormat += 'b';
+        } else if (d < 65536 && d >= 0) {
+          packetFormat += 'H';
+        } else if (d < 32767 && d >= -32768) {
+          packetFormat += 'h';
         } else {
           packetFormat += 'i';
         }

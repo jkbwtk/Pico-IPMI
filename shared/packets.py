@@ -35,6 +35,12 @@ def packDataAuto(opcode: int, *data):
         elif t == int:
             if d < 256 and d >= 0:
                 packetFormat += 'B'
+            elif d < 127 and d >= -128:
+                packetFormat += 'b'
+            elif d < 65536 and d >= 0:
+                packetFormat += 'H'
+            elif d < 32768 and d >= -32768:
+                packetFormat += 'h'
             else:
                 packetFormat += 'i'
         elif t == bool:
