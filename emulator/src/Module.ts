@@ -1,18 +1,19 @@
-import { Host, MQTTSettings, Sensors } from './interfaces';
 import { connect, MqttClient } from 'mqtt';
-import { clamp, clampCeil, hash, hashInt, padLeft, timeNow } from './utils';
-import { aliases } from './sensors';
-import { packDataAuto } from './packets';
-import { SENSOR_DATA } from './opcodes';
+import { aliases } from '#shared/sensors';
+import { clamp, clampCeil, hash, hashInt, padLeft, timeNow } from '#shared/utils';
+import { packDataAuto } from '#shared/packets';
+import { SENSOR_DATA } from '#shared/opcodes';
+import { Sensors, SysInfo } from '#shared/interfaces';
+import { MQTTSettings } from 'interfaces';
 
 
 export default class Module {
   name: string;
-  host: Host;
+  host: SysInfo;
   mqttSettings: MQTTSettings;
   client: MqttClient;
 
-  constructor(host: Host, mqttSettings: MQTTSettings) {
+  constructor(host: SysInfo, mqttSettings: MQTTSettings) {
     this.name = `${host.name}(${hash(host.name)})`;
 
     this.host = host;
@@ -157,7 +158,6 @@ export default class Module {
     const scale = 60;
     const offset = offsetRAW + hashInt(this.host.name + this.host.cpuName + this.host.arch);
 
-    this.log('Raw offset:', offsetRAW, 'Hashed offset:', offset);
 
     const sensors = this.generateSensors(offset, scale);
     const specs = this.systemSpecs;

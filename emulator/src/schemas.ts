@@ -1,5 +1,6 @@
 import { JSONSchemaType } from 'ajv';
-import { Config } from './interfaces';
+import { Config } from 'interfaces';
+
 
 export const configSchema: JSONSchemaType<Config> = {
   type: 'object',

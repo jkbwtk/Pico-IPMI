@@ -1,6 +1,8 @@
+require('module-alias/register');
+
 import Module from './Module';
 import { loadConfig } from './configLoader';
-import { hash } from './utils';
+import { hash } from '#shared/utils';
 
 
 const config = loadConfig();

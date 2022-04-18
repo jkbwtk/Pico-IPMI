@@ -1,0 +1,24 @@
+{
+  "name": "shared-ts",
+  "version": "1.0.0",
+  "description": "collection of files shared between projects",
+  "main": "build/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "convert": "npx tsc && node ./build/opcodesConverter"
+  },
+  "author": "Seviter",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^17.0.24",
+    "@types/python-struct": "^1.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.19.0",
+    "@typescript-eslint/parser": "^5.19.0",
+    "eslint": "^8.13.0",
+    "eslint-config-google": "^0.14.0",
+    "typescript": "^4.6.3"
+  },
+  "dependencies": {
+    "python-struct": "^1.1.3"
+  }
+}

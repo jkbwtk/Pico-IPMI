@@ -1,23 +1,5 @@
-export interface Host {
-   arch: string;
-   cpuCores: number;
-   cpuName: string;
-   cpuThreads: number;
-   drives: {
-     name: string;
-   }[];
-   gpus: {
-     name: string;
-     vram: number;
-   }[];
-   name: string;
-   networkInterfaces: {
-     name: string;
+import { SysInfo } from '#shared/interfaces';
 
-   }[];
-   os: string;
-   ramTotal: number;
-}
 
 export interface Config {
   mqtt: {
@@ -25,15 +7,7 @@ export interface Config {
     login: string;
     password: string;
   }
-  hosts: Host[];
-}
-
-export interface SensorAliases {
-  [key: string]: string[];
-}
-
-export interface Sensors {
-  [key: string]: number;
+  hosts: SysInfo[];
 }
 
 export interface MQTTSettings {
