@@ -49,3 +49,7 @@ export const clampCeil = (ceil: number, val: number): number => {
   if (val > ceil) return ceil;
   return val;
 };
+
+export const timeNow = (): number => {
+  return Math.floor(Date.now() / 1000);
+};

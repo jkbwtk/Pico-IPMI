@@ -1,6 +1,6 @@
 import { Host, MQTTSettings, Sensors } from './interfaces';
 import { connect, MqttClient } from 'mqtt';
-import { clamp, clampCeil, hash, hashInt, padLeft } from './utils';
+import { clamp, clampCeil, hash, hashInt, padLeft, timeNow } from './utils';
 import { aliases } from './sensors';
 import { packDataAuto } from './packets';
 import { SENSOR_DATA } from './opcodes';
@@ -46,7 +46,7 @@ export default class Module {
           this.log('Reset');
           break;
         case 'getSensors':
-          this.client.publish('pico_out', packDataAuto(SENSOR_DATA, ...Object.values(this.getFakeSensors())));
+          this.client.publish('pico_out', packDataAuto(SENSOR_DATA, ...Object.values(this.getFakeSensors(timeNow()))));
           break;
       }
     } else if (topic === 'pico_out') {
@@ -223,5 +223,15 @@ export default class Module {
 
 
     return d;
+  }
+
+  private getFakeSignalPower(offsetRAW = 0): number {
+    const scale = 5;
+    const x = (offsetRAW + hashInt(this.host.name + this.host.cpuName + this.host.arch)) / (9 * Math.PI) / scale;
+
+    const power = (((Math.sin(x - Math.sin(x))) / 0.5) + Math.cos(x / 2)) / 2.5;
+
+
+    return power > 0.45 ? 3 : (power > -0.45 ? 2 : 1);
   }
 }
