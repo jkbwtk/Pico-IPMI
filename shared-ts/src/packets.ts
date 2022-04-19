@@ -1,8 +1,8 @@
-import { PACKET_STOP } from './opcodes';
+import { Opcodes, PACKET_STOP } from './opcodes';
 import struct, { DataType } from 'python-struct';
 
 
-export const packData = (opcode: number, packetFormat: string, ...data: unknown[]): Buffer => {
+export const packData = (opcode: Opcodes, packetFormat: string, ...data: unknown[]): Buffer => {
   let headerSize = packetFormat.length + 2;
   headerSize += Math.floor(Math.log10(headerSize)) + 2;
 
@@ -13,7 +13,7 @@ export const packData = (opcode: number, packetFormat: string, ...data: unknown[
   return Buffer.concat([packet, PACKET_STOP]);
 };
 
-export const packDataAuto = (opcode: number, ...data: unknown[]): Buffer => {
+export const packDataAuto = (opcode: Opcodes, ...data: unknown[]): Buffer => {
   let packetFormat = '';
 
   for (const d of data) {
@@ -44,11 +44,11 @@ export const packDataAuto = (opcode: number, ...data: unknown[]): Buffer => {
   return packData(opcode, packetFormat, ...data);
 };
 
-export const unpackData = (packet: Buffer): unknown[] => {
+export const unpackData = (packet: Buffer): [number, string, ...unknown[]] => {
   const opcode = packet[0];
   const headerSize = parseInt(packet.subarray(2, packet.indexOf('s')).toString());
   const header = packet.subarray(1, headerSize + 1).toString();
-  const data = struct.unpack(header, packet.subarray(0, -PACKET_STOP.length));
+  const data = struct.unpack(header, packet.subarray(0, -PACKET_STOP.length)) as [number, string, ...unknown[]];
 
   // console.log(opcode);
   // console.log(headerSize);

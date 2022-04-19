@@ -34,5 +34,17 @@ for (const [k, v] of Object.entries(opcodes)) {
   }
 }
 
+out += '\n\n';
+out += 'export enum Opcodes {\n';
+for (const [k, v] of Object.entries(opcodes)) {
+  if (typeof v === 'number') {
+    out += `  ${k} = ${v},\n`;
+  } else if (typeof v === 'string') {
+    out += `  ${k} = '${v}',\n`;
+  } else {
+    throw new Error(`Unknown type: ${typeof v} for ${k}`);
+  }
+}
+out += '}\n';
 
 writeFileSync(outPath, out);
