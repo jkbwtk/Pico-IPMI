@@ -1,58 +1,78 @@
 import { connect, MqttClient } from 'mqtt';
-import { aliases } from '#shared/sensors';
-import { clamp, clampCeil, hash, hashInt, padLeft, timeNow } from '#shared/utils';
-import { packDataAuto } from '#shared/packets';
-import { SENSOR_DATA } from '#shared/opcodes';
+import { clamp, clampCeil, flatten, hash, hashInt, range, timeNow } from '#shared/utils';
+import { packDataAuto, unpackData } from '#shared/packets';
+import { COMM_POWER, COMM_RESET, GET_SENSORS, GET_SYSINFO, GET_WIFI, Opcodes, PING, SENSOR_DATA, SYSINFO_DATA, WIFI_DATA } from '#shared/opcodes';
 import { Sensors, SysInfo } from '#shared/interfaces';
 import { MQTTSettings } from 'interfaces';
+import { picoIn, picoOut, PUBLIC_IN, PUBLIC_OUT } from '#shared/mqttUtils';
 
 
 export default class Module {
+  mqtt_id: string;
   name: string;
   host: SysInfo;
   mqttSettings: MQTTSettings;
   client: MqttClient;
 
   constructor(host: SysInfo, mqttSettings: MQTTSettings) {
-    this.name = `${host.name}(${hash(host.name)})`;
+    this.mqtt_id = `emu_${hash(host.name)}`;
+    this.name = `${host.name}(${this.mqtt_id})`;
 
     this.host = host;
     this.mqttSettings = mqttSettings;
 
     this.client = connect(`mqtt://${this.mqttSettings.ip}`, {
-      clientId: 'emu_' + hash(this.host.name),
+      clientId: this.mqtt_id,
       username: this.mqttSettings.login,
       password: this.mqttSettings.password,
     });
 
-    this.client.subscribe('pico_in');
-    this.client.subscribe('pico_out');
+    this.client.subscribe(picoIn(this.mqtt_id));
 
-    this.client.on('message', this.onMessageHandler.bind(this));
+    this.client.subscribe(PUBLIC_IN);
+
+    this.client.on('message', this.handleMessage.bind(this));
+    this.client.on('connect', this.sendPong.bind(this));
+    this.client.on('reconnect', this.sendPong.bind(this));
+
+    this.client.on('error', this.log.bind(this));
   }
 
   private log(message: unknown, ...args: unknown[]) {
     console.log(`[${this.name}]`, message, ...args);
   }
 
-  private onMessageHandler(topic: string, message: Buffer) {
-    if (topic === 'pico_in') {
-      this.log('Message to Pico:', message.toString());
+  private handleMessage(topic: string, message: Buffer) {
+    const [opcode, , ...data] = unpackData(message);
+    this.log(topic, Opcodes[opcode], data);
 
-      switch (message.toString()) {
-        case 'power':
-          this.log('Power');
-          break;
-        case 'reset':
-          this.log('Reset');
-          break;
-        case 'getSensors':
-          this.client.publish('pico_out', packDataAuto(SENSOR_DATA, ...Object.values(this.getFakeSensors(timeNow()))));
-          break;
-      }
-    } else if (topic === 'pico_out') {
-      this.log('Message from Pico:', message.toString());
+    const outTopic = topic === PUBLIC_IN ? PUBLIC_OUT : picoOut(this.mqtt_id);
+
+
+    switch (opcode) {
+      case PING:
+        this.sendPong();
+        break;
+      case COMM_POWER:
+        this.log('Power');
+        break;
+      case COMM_RESET:
+        this.log('Reset');
+        break;
+      case GET_SENSORS:
+        this.client.publish(picoOut(this.mqtt_id), packDataAuto(SENSOR_DATA, data[0], ...flatten(this.getFakeSensors(timeNow()))));
+        break;
+      case GET_SYSINFO:
+        this.client.publish(picoOut(this.mqtt_id), packDataAuto(SYSINFO_DATA, data[0], JSON.stringify(this.host)));
+        break;
+      case GET_WIFI:
+        this.client.publish(picoOut(this.mqtt_id), packDataAuto(WIFI_DATA, data[0], this.getFakeSignalPower()));
+        break;
     }
+  }
+
+  private sendPong() {
+    this.client.publish(PUBLIC_OUT, packDataAuto(Opcodes.PONG, this.mqtt_id, JSON.stringify(this.host)));
   }
 
   private get systemSpecs() {
@@ -121,108 +141,94 @@ export default class Module {
     };
   }
 
-  private generateSensors(offset: number, scale: number): Sensors {
-    const d: Sensors = {};
-    const specs = this.systemSpecs;
-
-    // eslint-disable-next-line max-len
-    const batt_level = (o: number) => Math.sin(hashInt(this.host.name) + o * Math.PI / (specs.batt_capacity / (specs.batt_charge_speed / specs.batt_voltage)) / 60 / scale) * 45 + 55;
-    const cpu_usage = (v: number) => clamp(0, 100, (1.02 ** (((hashInt(Math.floor(hashInt(this.host.cpuName) + offset / v)) % 5000) / 20) + 150)) / 25);
-
-
-    d.batt_charge = batt_level(offset) > batt_level(offset - 1) ? specs.batt_charge_speed : 0;
-    d.batt_level = batt_level(offset);
-    // eslint-disable-next-line max-len
-    d.batt_time = batt_level(offset) < batt_level(offset - 1) ? 60 * (specs.batt_capacity / 100 * d.batt_level) / (specs.batt_charge_speed / specs.batt_voltage) : 0;
-
-    // eslint-disable-next-line max-len
-    d.bclk = 100 - Math.max(0, Math.round(1.01 ** (hashInt(hashInt(this.host.name) + Math.floor(offset / specs.bclk_change_rate / 60)) % 650) / 10) / 10 - 0.3);
-
-    // eslint-disable-next-line max-len
-    d.cpu_usage = clampCeil(100, cpu_usage((cpu_usage(180) * (Math.floor(offset / scale)) % 240)) + ((hashInt(offset + 'cpu') % 1001) / 100));
-    d.cpu_power = 15 + d.cpu_usage * specs.cpu_tdp / 100 + (((hashInt(offset / 5 + 'cpu_pow') % 101) / 10) - 5);
-    d.cpu_temp = clampCeil(105, 25 + 35 * ((d.cpu_power / specs.cpu_tdp) / specs.cooler_efficency));
-
-    d.cpu_fan = clampCeil(specs.fan_rpm, Math.round(d.cpu_temp / 95 * specs.fan_rpm));
-
-    // eslint-disable-next-line max-len
-    d.ram_used = clampCeil(Math.ceil(this.host.ramTotal / 1_048_576), Math.round(((2048 + (((1.002 ** (((hashInt(hashInt(this.host.cpuName) + Math.floor(offset / 360)) % 1500) + 2000)))) / 1200) * this.host.ramTotal) + (d.cpu_usage / 100 * this.host.ramTotal)) / 1_048_576));
-    d.ram_freq = 1200 + hashInt(this.host.name + 'freq') % 10 * 200;
-
-
-    return d;
-  }
-
-
   private getFakeSensors(offsetRAW = 0): Sensors {
     const scale = 60;
     const offset = offsetRAW + hashInt(this.host.name + this.host.cpuName + this.host.arch);
 
 
-    const sensors = this.generateSensors(offset, scale);
+    // const sensors = this.generateSensors(offset, scale);
     const specs = this.systemSpecs;
-    const d: Sensors = {};
 
-    for (const k of Object.keys(aliases).sort()) {
-      if (k.startsWith('_')) continue;
-      if (sensors[k] === undefined) this.log('[Warning] Undefined sensor:', k);
+    // eslint-disable-next-line max-len
+    const batt_level = (o: number) => Math.sin(hashInt(this.host.name) + o * Math.PI / (specs.batt_capacity / (specs.batt_charge_speed / specs.batt_voltage)) / 60 / scale) * 45 + 55;
+    const cpu_usage = (v: number) => clamp(0, 100, (1.02 ** (((hashInt(Math.floor(hashInt(this.host.cpuName) + offset / v)) % 5000) / 20) + 150)) / 25);
+    // eslint-disable-next-line max-len
+    const drive_read = (i: number) => clamp(0, specs.drives[i].max_read, specs.drives[i].max_read * (((hashInt(Math.floor(offset / scale) + (i + 20).toString() + 'drive_read') / 10000) % 1) ** 10) + (((hashInt(offset) / 1000) % 10) - 5));
+    // eslint-disable-next-line max-len
+    const drive_write = (i: number) => clamp(0, specs.drives[i].max_write, specs.drives[i].max_write * (((hashInt(Math.floor(offset / scale) + (i + 20).toString() + 'drive_write') / 10000) % 1) ** 12) + (((hashInt(offset) / 1000) % 10) - 5));
+    // eslint-disable-next-line max-len
+    const gpu_usage = (i: number) => clamp(0, 100, (1.02 ** (((hashInt(Math.floor(hashInt(this.host.gpus[i].name) + Math.floor(offset / scale))) % 5000) / 20) + 150)) / 25 + ((hashInt(offset + this.host.cpuName) % 1001) / 100));
 
-      d[k] = sensors[k] ?? -1;
-    }
+    const cpuUsage = clampCeil(100, cpu_usage((cpu_usage(180) * (Math.floor(offset / scale)) % 240)) + ((hashInt(offset + 'cpu') % 1001) / 100));
+    const cpuPower = 15 + cpuUsage * specs.cpu_tdp / 100 + (((hashInt(offset / 5 + 'cpu_pow') % 101) / 10) - 5);
+    const cpuTemp = clampCeil(105, 25 + 35 * ((cpuPower / specs.cpu_tdp) / specs.cooler_efficency));
 
-    // system state:
-    let remCpu: number = d.cpu_usage ?? 0;
 
-    for (let i = 0; i < this.host.cpuThreads; i += 1) {
-      const usage = clampCeil(100, remCpu) * (((hashInt(offset * (i + 20) + 'core') / 10000) % 1) ** 3.5);
-      remCpu -= usage / this.host.cpuThreads;
+    const distCpuLoad = (cpuUsage: number) => {
+      let remCpu: number = cpuUsage;
+      const cpuLoad = [];
 
-      d[`cpu${padLeft(i, 2, '0')}_usage`] = usage;
-    }
-
-    while (remCpu > 0.001) {
       for (let i = 0; i < this.host.cpuThreads; i += 1) {
-        const topup = clampCeil(100 - d[`cpu${padLeft(i, 2, '0')}_usage`], remCpu);
-        remCpu -= topup / this.host.cpuThreads;
+        const usage = clampCeil(100, remCpu) * (((hashInt(offset * (i + 20) + 'core') / 10000) % 1) ** 3.5);
+        remCpu -= usage / this.host.cpuThreads;
 
-        d[`cpu${padLeft(i, 2, '0')}_usage`] += topup;
+        cpuLoad.push(usage);
       }
-    }
+
+      while (remCpu > 0.001) {
+        for (let i = 0; i < this.host.cpuThreads; i += 1) {
+          const topup = clampCeil(100 - cpuLoad[i], remCpu);
+          remCpu -= topup / this.host.cpuThreads;
+
+          cpuLoad[i] += topup;
+        }
+      }
 
 
-    for (let i = 0; i < this.host.drives.length; i += 1) {
+      return cpuLoad;
+    };
+
+
+    return {
+      batt_charge: batt_level(offset) > batt_level(offset - 1) ? specs.batt_charge_speed : 0,
+      batt_level: batt_level(offset),
       // eslint-disable-next-line max-len
-      d[`drive${i}_read`] = clamp(0, specs.drives[i].max_read, specs.drives[i].max_read * (((hashInt(Math.floor(offset / scale) + (i + 20).toString() + 'drive_read') / 10000) % 1) ** 10) + (((hashInt(offset) / 1000) % 10) - 5));
+      batt_time: batt_level(offset) < batt_level(offset - 1) ? 60 * (specs.batt_capacity / 100 * batt_level(offset)) / (specs.batt_charge_speed / specs.batt_voltage) : 0,
+      bclk: 100 - Math.max(0, Math.round(1.01 ** (hashInt(hashInt(this.host.name) + Math.floor(offset / specs.bclk_change_rate / 60)) % 650) / 10) / 10 - 0.3),
+      cpu_fan: clampCeil(specs.fan_rpm, Math.round(cpuTemp / 95 * specs.fan_rpm)),
+      cpu_power: cpuPower,
+      cpu_temp: cpuTemp,
+      cpu_usage: cpuUsage,
+      ram_freq: 1200 + hashInt(this.host.name + 'freq') % 10 * 200,
       // eslint-disable-next-line max-len
-      d[`drive${i}_write`] = clamp(0, specs.drives[i].max_write, specs.drives[i].max_write * (((hashInt(Math.floor(offset / scale) + (i + 20).toString() + 'drive_write') / 10000) % 1) ** 12) + (((hashInt(offset) / 1000) % 10) - 5));
-    }
-
-    for (let i = 0; i < this.host.drives.length; i += 1) {
-      d[`smart${i}_usage`] = Math.max(d[`drive${i}_read`] / specs.drives[i].max_read * 100, d[`drive${i}_write`] / specs.drives[i].max_write * 100);
-      d[`smart${i}_life`] = specs.drives[i].has_life ? specs.drives[i].starting_life - Math.floor(offsetRAW / 360 / scale) : -1;
-      d[`smart${i}_warning`] = 0;
-      d[`smart${i}_failure`] = 0;
-      d[`smart${i}_reads`] = specs.drives[i].starting_reads + Math.floor(offsetRAW / 30 / scale);
-      d[`smart${i}_writes`] = specs.drives[i].starting_writes + Math.floor(offsetRAW / 30 / scale);
-    }
-
-    for (let i = 0; i < this.host.networkInterfaces.length; i += 1) {
-      // eslint-disable-next-line max-len
-      d[`net${i}_up`] = clamp(0, specs.networkInterfaces[i].max_up, specs.networkInterfaces[i].max_up * (((hashInt(Math.floor(offset / (d.cpu_usage ?? 1 * scale)) + (i + 20).toString() + 'up') / 10000) % 1) ** 10) + (((hashInt(offset) / 1000) % 10) - 5));
-      // eslint-disable-next-line max-len
-      d[`net${i}_dl`] = clamp(0, specs.networkInterfaces[i].max_dl, specs.networkInterfaces[i].max_dl * (((hashInt(Math.floor(offset / (d.cpu_usage ?? 1 * scale)) + (i + 20).toString() + 'dl') / 10000) % 1) ** 6) + (((hashInt(offset) / 1000) % 10) - 5));
-    }
-
-    for (let i = 0; i < this.host.gpus.length; i += 1) {
-      // eslint-disable-next-line max-len
-      d[`gpu${i}_usage`] = clamp(0, 100, (1.02 ** (((hashInt(Math.floor(hashInt(this.host.gpus[i].name) + Math.floor(offset / scale))) % 5000) / 20) + 150)) / 25 + ((hashInt(offset + this.host.cpuName) % 1001) / 100));
-      // eslint-disable-next-line max-len
-      d[`gpu${i}_mem_used`] = clampCeil(this.host.gpus[i].vram, Math.round(128 + 0.6 * (this.host.gpus[i].vram * (((hashInt(Math.floor(offset / d.cpu_usage ?? 1) + (i + 20).toString() + 'gpu') / 10000) % 1) ** 10) + (d[`gpu${i}_usage`] / 100 * this.host.gpus[i].vram))));
-      d[`gpu${i}_temp`] = clampCeil(105, 25 + 35 * (d[`gpu${i}_usage`] / specs.gpus[i].cooler_efficency / 100));
-    }
-
-
-    return d;
+      ram_used: clampCeil(Math.ceil(this.host.ramTotal / 1_048_576), Math.round(((2048 + (((1.002 ** (((hashInt(hashInt(this.host.cpuName) + Math.floor(offset / 360)) % 1500) + 2000)))) / 1200) * this.host.ramTotal) + (cpuUsage / 100 * this.host.ramTotal)) / 1_048_576)),
+      cpus: distCpuLoad(cpuUsage),
+      drives: range(this.host.drives.length).map((i) => ({
+        read: drive_read(i),
+        write: drive_write(i),
+      })),
+      smart: range(this.host.drives.length).map((i) => ({
+        usage: Math.max(drive_read(i) / specs.drives[i].max_read * 100, drive_write(i) / specs.drives[i].max_write * 100),
+        life: specs.drives[i].has_life ? specs.drives[i].starting_life - Math.floor(offsetRAW / 360 / scale) : -1,
+        warning: 0,
+        failure: 0,
+        reads: specs.drives[i].starting_reads + Math.floor(offsetRAW / 30 / scale),
+        writes: specs.drives[i].starting_writes + Math.floor(offsetRAW / 30 / scale),
+      })),
+      networkInterfaces: range(this.host.networkInterfaces.length).map((i) => ({
+        // eslint-disable-next-line max-len
+        up: clamp(0, specs.networkInterfaces[i].max_up, specs.networkInterfaces[i].max_up * (((hashInt(Math.floor(offset / (cpuUsage ?? 1 * scale)) + (i + 20).toString() + 'up') / 10000) % 1) ** 10) + (((hashInt(offset) / 1000) % 10) - 5)),
+        // eslint-disable-next-line max-len
+        dl: clamp(0, specs.networkInterfaces[i].max_dl, specs.networkInterfaces[i].max_dl * (((hashInt(Math.floor(offset / (cpuUsage ?? 1 * scale)) + (i + 20).toString() + 'dl') / 10000) % 1) ** 6) + (((hashInt(offset) / 1000) % 10) - 5)),
+      })),
+      gpus: range(this.host.gpus.length).map((i) => ({
+        // eslint-disable-next-line max-len
+        usage: gpu_usage(i),
+        // eslint-disable-next-line max-len
+        mem_used: clampCeil(this.host.gpus[i].vram, Math.round(128 + 0.6 * (this.host.gpus[i].vram * (((hashInt(Math.floor(offset / cpuUsage ?? 1) + (i + 20).toString() + 'gpu') / 10000) % 1) ** 10) + (gpu_usage(i) / 100 * this.host.gpus[i].vram)))),
+        temp: clampCeil(105, 25 + 35 * (gpu_usage(i) / specs.gpus[i].cooler_efficency / 100)),
+      })),
+    };
   }
 
   private getFakeSignalPower(offsetRAW = 0): number {

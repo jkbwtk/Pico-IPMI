@@ -2,7 +2,7 @@ import Ajv from 'ajv';
 import { join } from 'path';
 import { loadJSON } from '#shared/utils';
 import { configSchema } from './schemas';
-import { Config } from 'interfaces';
+import { Config } from './interfaces';
 
 
 const ajv = new Ajv({ useDefaults: true });
