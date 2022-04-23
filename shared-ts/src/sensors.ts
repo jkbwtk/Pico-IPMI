@@ -1,51 +1,40 @@
-import { SensorAliases, Sensors, SysInfo } from './interfaces';
-import { join } from 'path';
-import { loadJSON, padLeft } from './utils';
-
-export const aliases: SensorAliases = loadJSON(join(__dirname, '..', '..', 'shared', 'sensorAliases.json'));
+import { Sensors, SysInfo } from './interfaces';
+import { range } from './utils';
 
 
-export const parseSensors = (data: number[], sysInfo: SysInfo): Sensors => {
-  const l = data.slice(2);
-
-  const d: Sensors = {};
-
-  for (const k of Object.keys(aliases).sort()) {
-    if (k.startsWith('_')) continue;
-
-    d[k] = l.shift() ?? -1;
-  }
-
-
-  for (let i = 0; i < sysInfo.cpuThreads; i += 1) {
-    d[`cpu${padLeft(i, 2, '0')}_usage`] = l.shift() ?? -1;
-  }
-
-  for (let i = 0; i < sysInfo.drives.length; i += 1) {
-    d[`drive${i}_read`] = l.shift() ?? -1;
-    d[`drive${i}_write`] = l.shift() ?? -1;
-  }
-
-  for (let i = 0; i < sysInfo.drives.length; i += 1) {
-    d[`smart${i}_usage`] = l.shift() ?? -1;
-    d[`smart${i}_life`] = l.shift() ?? -1;
-    d[`smart${i}_warning`] = l.shift() ?? -1;
-    d[`smart${i}_failure`] = l.shift() ?? -1;
-    d[`smart${i}_reads`] = l.shift() ?? -1;
-    d[`smart${i}_writes`] = l.shift() ?? -1;
-  }
-
-  for (let i = 0; i < sysInfo.networkInterfaces.length; i += 1) {
-    d[`net${i}_up`] = l.shift() ?? -1;
-    d[`net${i}_dl`] = l.shift() ?? -1;
-  }
-
-  for (let i = 0; i < sysInfo.gpus.length; i += 1) {
-    d[`gpu${i}_usage`] = l.shift() ?? -1;
-    d[`gpu${i}_mem_used`] = l.shift() ?? -1;
-    d[`gpu${i}_temp`] = l.shift() ?? -1;
-  }
-
-
-  return d;
+export const parseSensors = (sysInfo: SysInfo, data: number[]): Sensors => {
+  return {
+    batt_charge: data.shift() ?? -1,
+    batt_level: data.shift() ?? -1,
+    batt_time: data.shift() ?? -1,
+    bclk: data.shift() ?? -1,
+    cpu_fan: data.shift() ?? -1,
+    cpu_power: data.shift() ?? -1,
+    cpu_temp: data.shift() ?? -1,
+    cpu_usage: data.shift() ?? -1,
+    ram_freq: data.shift() ?? -1,
+    ram_used: data.shift() ?? -1,
+    cpus: range(sysInfo.cpuThreads).map(() => data.shift() ?? -1),
+    drives: sysInfo.drives.map(() => ({
+      read: data.shift() ?? -1,
+      write: data.shift() ?? -1,
+    })),
+    smart: sysInfo.drives.map(() => ({
+      usage: data.shift() ?? -1,
+      life: data.shift() ?? -1,
+      warning: data.shift() ?? -1,
+      failure: data.shift() ?? -1,
+      reads: data.shift() ?? -1,
+      writes: data.shift() ?? -1,
+    })),
+    networkInterfaces: sysInfo.networkInterfaces.map(() => ({
+      up: data.shift() ?? -1,
+      dl: data.shift() ?? -1,
+    })),
+    gpus: sysInfo.gpus.map(() => ({
+      usage: data.shift() ?? -1,
+      mem_used: data.shift() ?? -1,
+      temp: data.shift() ?? -1,
+    })),
+  };
 };

@@ -53,3 +53,51 @@ export const clampCeil = (ceil: number, val: number): number => {
 export const timeNow = (): number => {
   return Math.floor(Date.now() / 1000);
 };
+
+export const getNonce = (length = 12): string => {
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let text = '';
+
+  for (let i = 0; i < length; i += 1) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+
+  return text;
+};
+
+export const sleep = async (time: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, time));
+};
+
+
+type Range = {
+  (end: number): number[];
+  (start: number, end: number): number[];
+  (start: number, end: number, step: number): number[];
+};
+
+export const range: Range = (start, end?, step = 1): number[] => {
+  const s = end !== undefined ? start : 0;
+  const e = end !== undefined ? end as number : start;
+  const r = [];
+
+  if (e > s) for (let i = s; i < e; i += Math.abs(step as number)) r.push(i);
+  if (s > e) for (let i = s; i > e; i -= Math.abs(step as number)) r.push(i);
+
+  return r;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const flatten = (target: any): any[] => {
+  const r = [];
+
+  if (Array.isArray(target)) {
+    for (const item of target) r.push(...flatten(item));
+  } else if (typeof target === 'object') {
+    for (const value of Object.values(target)) r.push(...flatten(value));
+  } else {
+    r.push(target);
+  }
+
+  return r;
+};
