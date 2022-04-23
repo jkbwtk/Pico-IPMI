@@ -1,0 +1,10 @@
+{
+  "mqtt": {
+    "ip": "localhost",
+    "login": "login",
+    "password": "password"
+  },
+  "api": {
+    "port": 8080
+  }
+}
