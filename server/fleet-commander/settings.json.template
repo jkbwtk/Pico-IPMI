@@ -2,7 +2,9 @@
   "mqtt": {
     "ip": "localhost",
     "login": "login",
-    "password": "password"
+    "password": "password",
+    "requestRetries": 5,
+    "requestTimeout": 1000
   },
   "api": {
     "port": 8080

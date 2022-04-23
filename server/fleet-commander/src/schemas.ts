@@ -11,6 +11,8 @@ export const configSchema: JSONSchemaType<Config> = {
         ip: { type: 'string' },
         login: { type: 'string', default: '' },
         password: { type: 'string', default: '' },
+        requestRetries: { type: 'number', minimum: 0, default: 5 },
+        requestTimeout: { type: 'number', minimum: 1, default: 1000 },
       },
       required: ['ip'],
     },

@@ -131,17 +131,29 @@ const sendRequest = <T>(topic: string, nonce: string, packet: Buffer): Deferred<
     reject: hook.reject,
   });
 
-  setTimeout(() => {
-    if (requests.has(nonce)) {
-      console.log('Request failed, running cleanup');
-      requests.delete(nonce);
-      hook.reject(new Error('Request timed out'));
-    }
-  }, 5 * 1000);
 
+  requestTimeout(topic, nonce, packet);
   client.publish(topic, packet);
 
   return hook;
+};
+
+const requestTimeout = (topic: string, nonce: string, packet: Buffer): void => {
+  setTimeout(() => {
+    const request = requests.get(nonce);
+    if (request === undefined) return;
+
+    if (request.retries < config.mqtt.requestRetries) {
+      request.retries += 1;
+      console.log(`Request [${nonce}] failed, retries [${request.retries}]`);
+      requestTimeout(topic, nonce, packet);
+      client.publish(topic, packet);
+    } else {
+      console.log(`Request [${nonce}] failed, running cleanup`);
+      requests.delete(nonce);
+      request.reject(new Error('Request timed out'));
+    }
+  }, config.mqtt.requestTimeout);
 };
 
 const sendPing = (): void => {

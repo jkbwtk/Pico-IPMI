@@ -21,6 +21,8 @@ export interface Config {
     ip: string;
     login: string;
     password: string;
+    requestRetries: number;
+    requestTimeout: number;
   };
   api: {
     port: number;
