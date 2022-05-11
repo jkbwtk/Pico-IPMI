@@ -1,30 +1,24 @@
 from shared.opcodes import PACKET_STOP
-import math
 import struct
 
 
-# fix for esp8266
-def log10(number):
-    # check for log10 support
-    try:
-        return math.log10(number)
-    except AttributeError:
-        return math.log(number) / math.log(10)
+def packDataRaw(packetFormat: str, data: list):
+    headerSize = len(packetFormat) + 1
+    headerSize += len(str(headerSize))
 
+    # fix for sizes 11, 101, 102, 1001, 1002, 1003, etc.
+    while headerSize < len(f'{headerSize}s' + packetFormat):
+        headerSize += 1
 
-def packData(opcode: int, packetFormat: str, *data):
-    headerSize = len(packetFormat) + 2
-    headerSize += math.floor(log10(headerSize)) + 1
-    packetFormat = 'B{}s'.format(headerSize) + packetFormat
+    packetFormat = f'{headerSize}s' + packetFormat
 
-    # print(packetFormat)
     header = bytearray(packetFormat, 'utf-8')
-    packet = struct.pack(packetFormat, opcode, header, *data)
+    packet = struct.pack(packetFormat, header, *data)
 
     return packet + PACKET_STOP
 
 
-def packDataAuto(opcode: int, *data):
+def packData(data: list):
     packetFormat = ''
 
     for i, d in enumerate(data):
@@ -46,15 +40,17 @@ def packDataAuto(opcode: int, *data):
         elif t == bool:
             packetFormat += 'h'
         else:
+            if t == str:
+                data[i] = data[i].encode('utf-8')
+
             packetFormat += f'{len(d)}s'
 
-    return packData(opcode, packetFormat, *data)
+    return packDataRaw(packetFormat, data)
 
 
-def unpackData(packet):
-    opcode = packet[0]
-    headerSize = int(packet[2:packet.find(b's')])
-    header = packet[1:headerSize + 1].decode()
+def unpackDataRaw(packet) -> tuple:
+    headerSize = int(packet[0:packet.find(b's')])
+    header = packet[0:headerSize].decode('utf-8')
     data = struct.unpack(header, packet[:-len(PACKET_STOP)])
 
     # print('Opcode', opcode)
@@ -65,5 +61,21 @@ def unpackData(packet):
     return data
 
 
-def createRequest(request):
-    return packData(request, '')
+def unpackData(packet: bytes) -> list:
+    data = unpackDataRaw(packet)
+
+    if len(data) < 6:
+        raise Exception('Invalid packet, too few arguments')
+
+    if not isinstance(data[1], int):
+        raise Exception('Invalid packet, opcode is not an int')
+    if not isinstance(data[2], int):
+        raise Exception('Invalid packet, origin is not an int')
+    if not isinstance(data[3], int):
+        raise Exception('Invalid packet, destination is not an int')
+    if not isinstance(data[4], int):
+        raise Exception('Invalid packet, uniq is not an int')
+    if not isinstance(data[5], int):
+        raise Exception('Invalid packet, channel is not an int')
+
+    return [data[1], data[2], data[3], data[4], data[5], list(data[6:])]

@@ -1,6 +1,8 @@
+import time
 import binascii
 import json
 from hashlib import sha256
+from random import getrandbits
 
 
 def loadJSON(name: str) -> dict:
@@ -11,14 +13,12 @@ def loadJSON(name: str) -> dict:
     except:
         return {}
 
-
     return data
 
 
 def saveJSON(name: str, data):
     file = open(name, 'w', encoding='utf-8')
 
-    print(type(data))
     if type(data) == str:
         file.write(data)
     elif type(data) == bytes:
@@ -29,16 +29,13 @@ def saveJSON(name: str, data):
     file.close()
 
 
-def getHash(data: dict) -> str:
+def getHash(data: dict) -> bytes:
     hasher = sha256()
 
     for k in sorted(data.keys()):
         hasher.update(json.dumps(data[k]).encode('utf-8'))
 
-
-    hash = binascii.hexlify(hasher.digest())
-
-    return hash[:6]
+    return binascii.hexlify(hasher.digest())[:6]
 
 
 def parseType(value: str):
@@ -47,12 +44,12 @@ def parseType(value: str):
 
         if v == v // 1:
             return int(v)
-        else:
-            return v
-    except:
+
+        return v
+    except ValueError:
         if value == 'No':
             return False
-        elif value == 'Yes':
+        if value == 'Yes':
             return True
 
         return value
@@ -64,5 +61,31 @@ def sortKeys(data: dict) -> dict:
     for k in sorted(data):
         d[k] = data[k]
 
-
     return d
+
+
+def getUniq() -> str:
+    return getrandbits(32) % (65535 + 1)
+
+
+def time_ns() -> int:
+    return time.ticks_us() * 1000
+
+
+def timeDivider(counter: int, loopTime: int, interval: int) -> bool:
+    if loopTime > interval:
+        return True
+
+    return True if counter % (interval // loopTime) == 0 else False
+
+
+def flatten(l: list) -> list:
+    r = []
+
+    for i in l:
+        if isinstance(i, list):
+            r += flatten(i)
+        else:
+            r.append(i)
+
+    return r

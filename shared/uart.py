@@ -1,108 +1,57 @@
-import random
-import string
-import time
+from shared.baseClient import BaseClient, genericWritePacket
 from shared.opcodes import PACKET_STOP
 
 
 try:
-    from machine import Timer
-except:
-    import threading
-    import signal
+    from micropython import const  # check if running in micropython
+    from shared.utils import time_ns
 
-    TERMINATED = False
-
-    def terminator(signum, frame):
-        global TERMINATED
-
-        print('Terminating')
-        TERMINATED = True
-        raise InterruptedError()
-
-    signal.signal(signal.SIGTERM, terminator)
-    signal.signal(signal.SIGINT, terminator)
-
-    class Timer(threading.Thread):
-        PERIODIC = 0
-
-        def __init__(self):
-            threading.Thread.__init__(self)
-            self.daemon = False
-            self.loop = threading.Event()
-
-        def init(self, freq, mode, callback):
-            self.interval = 1 / freq
-            self.mode = mode
-            self.callback = callback
-
-            self.start()
-
-        def deinit(self):
-            self.loop.set()
-            self.join()
-
-        def run(self):
-            while not self.loop.wait(self.interval):
-                if TERMINATED:
-                    return self.deinit()
-
-                self.callback(self)
+    del const
+except ModuleNotFoundError as e:
+    from time import time_ns
 
 
-class UART:
-    def __init__(self, uart) -> None:
-        self.uart = uart
+class UART(BaseClient):
+    def checkRequestRetryCallback(self, request: list):
+        self.client.write(request[4])
 
-        self.packetTimer = Timer()
-        self.packetTimer.init(freq=1 / 2, mode=Timer.PERIODIC, callback=self.packetChecker)
+    @genericWritePacket
+    def writePacket(self, _, packetRaw: bytes):
+        self.client.write(packetRaw)
 
-        self.pendingPackets = {} # noun: [timestamp, retries, packet]
-
-    def __del__(self):
-        self.packetTimer.deinit()
-
-    def packetChecker(self, timer):
-        now = time.time_ns()
-        items = list(self.pendingPackets.items())
-
-        for noun, packet in items:
-            if now >= packet[0] + 1_000_000_000:
-                if packet[1] >= 5:
-                    print('CONNECTION ERROR!', noun, packet)
-                    self.pendingPackets.pop(noun)
-                    continue
-
-                packet[1] += 1
-                packet[0] = now
-                print(noun, 'Retries:', packet[1])
-                # self.uart.write(packet[2])
-
-    def watchPacket(self, packet: bytes):
-        noun = ''.join(random.choice(string.ascii_letters) for _ in range(12))
-
-        self.pendingPackets[noun] = [time.time_ns(), 0, packet]
-
-    def write(self, packet: bytes, important=False):
-        if important:
-            self.watchPacket(packet)
-
-        self.uart.write(packet)
-
-    def readLine(self):
-        firstLoop = True
+    def readPacket(self) -> bytes | None:
         buffer = b''
+        startTime = time_ns()
 
-        while True:
-            packet: bytes | None = self.uart.read(1)
-            if packet == None:
-                if firstLoop:
-                    return False
+        while len(buffer) <= 1024:
+            packet: bytes | None = self.client.read(1)
+            if packet is None:
+                if len(buffer) == 0:
+                    return None
 
-                firstLoop = False
+                if time_ns() > startTime + 50_000_000:
+                    print(f'Packet timeout, buffer [{buffer}]')
+                    return None
+
                 continue
 
             buffer += packet
+            startTime = time_ns()
+
             if not buffer.endswith(PACKET_STOP):
                 continue
 
             return buffer
+
+        raise Exception('Packet size exceeded 1024 bytes')
+
+    def checkRX(self) -> None:
+        if hasattr(self.client, 'any'):
+            while self.client.any() > 0:
+                self.handleRX()
+        else:
+            while self.client.in_waiting > 0:
+                self.handleRX()
+
+    def handleRX(self, *args) -> None:
+        raise NotImplementedError

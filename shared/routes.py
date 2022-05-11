@@ -1,0 +1,7 @@
+HOST = 0
+PICO = 1
+ESP = 2
+COMM = 3
+
+PUBLIC = 250
+PRIVATE = 251
