@@ -20,7 +20,7 @@ export const parseSensors = (sysInfo: SysInfo, data: number[]): Sensors => {
       write: data.shift() ?? -1,
     })),
     smart: sysInfo.drives.map(() => ({
-      usage: data.shift() ?? -1,
+      temp: data.shift() ?? -1,
       life: data.shift() ?? -1,
       warning: data.shift() ?? -1,
       failure: data.shift() ?? -1,

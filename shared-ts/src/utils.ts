@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
+import path from 'path';
 
 
 export const loadJSON = <T>(path: string): T => {
@@ -54,15 +55,8 @@ export const timeNow = (): number => {
   return Math.floor(Date.now() / 1000);
 };
 
-export const getNonce = (length = 12): string => {
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let text = '';
-
-  for (let i = 0; i < length; i += 1) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-
-  return text;
+export const getUniq = (): number => {
+  return Math.floor(Math.random() * 65536);
 };
 
 export const sleep = async (time: number): Promise<void> => {
@@ -100,4 +94,9 @@ export const flatten = (target: any): any[] => {
   }
 
   return r;
+};
+
+export const extractFilename = (file: string): string => {
+  const filename = path.basename(file);
+  return filename.substring(0, filename.length - path.extname(file).length);
 };

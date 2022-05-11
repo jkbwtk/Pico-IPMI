@@ -1,3 +1,7 @@
+import { Opcodes } from './opcodes';
+import { DataType } from 'python-struct';
+import { Routes } from './routes';
+
 export interface SysInfo {
    arch: string;
    cpuCores: number;
@@ -40,7 +44,7 @@ export interface Sensors {
     write: number;
   }[];
   smart: {
-    usage: number;
+    temp: number;
     life: number;
     warning: number;
     failure: number;
@@ -56,4 +60,13 @@ export interface Sensors {
     mem_used: number;
     temp: number;
   }[];
+}
+
+export interface Packet {
+  opcode: Opcodes;
+  origin: Routes;
+  destination: Routes;
+  uniq: number;
+  channel: Routes;
+  data: DataType[];
 }

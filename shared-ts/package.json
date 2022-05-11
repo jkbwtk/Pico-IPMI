@@ -5,7 +5,7 @@
   "main": "build/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "convert": "npx tsc && node ./build/opcodesConverter"
+    "convert": "npx tsc && node ./build/converter"
   },
   "author": "Seviter",
   "license": "ISC",
