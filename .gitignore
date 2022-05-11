@@ -32,6 +32,7 @@ lerna-debug.log*
 
 server/config/
 
+routes.ts
 opcodes.ts
 tsconfig.tsbuildinfo
 
