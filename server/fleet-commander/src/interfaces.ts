@@ -3,11 +3,12 @@ import { SysInfo } from '#shared/interfaces';
 
 export interface ModuleData {
   name: string;
-  sysInfo: SysInfo;
+  lastPing: number;
+  sysInfo: SysInfo | null;
 }
 
 export interface Request {
-  nonce: string;
+  uniq: number;
   timestamp: number;
   retries: number;
   packet: Buffer;
