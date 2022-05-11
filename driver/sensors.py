@@ -72,7 +72,7 @@ def getSysInfo() -> dict:
         'cpuThreads': psutil.cpu_count(logical=True),
 
         # RAM
-        'ramTotal': memory.total,
+        'ramTotal': memory.total // 1_048_576,
 
         # drives
         'drives': getDrives(),
