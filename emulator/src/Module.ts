@@ -1,10 +1,35 @@
 import { connect, MqttClient } from 'mqtt';
-import { clamp, clampCeil, flatten, hash, hashInt, range, timeNow } from '#shared/utils';
-import { packDataAuto, unpackData } from '#shared/packets';
-import { COMM_POWER, COMM_RESET, GET_SENSORS, GET_SYSINFO, GET_WIFI, Opcodes, PING, SENSOR_DATA, SYSINFO_DATA, WIFI_DATA } from '#shared/opcodes';
-import { Sensors, SysInfo } from '#shared/interfaces';
+import { clamp, clampCeil, flatten, getUniq, hash, hashInt, range, timeNow } from '#shared/utils';
+import { packData, unpackData } from '#shared/packets';
+import {
+  AMBIENT_TEMP_DATA,
+  COMM_POWER,
+  COMM_RESET,
+  ERR_UNSUPPORTED_OPCODE,
+  GET_AMBIENT_TEMP,
+  GET_HDD_ACTIVITY,
+  GET_POWER_STATUS,
+  GET_SENSORS,
+  GET_SYSINFO,
+  GET_WIFI,
+  HDD_ACTIVITY_DATA,
+  OK,
+  Opcodes,
+  PING,
+  PONG,
+  POWER_STATUS_DATA,
+  REGISTER,
+  REGISTERED,
+  REGISTRATION_DATA,
+  SENSOR_DATA,
+  SYSINFO_DATA,
+  TEST_DATA,
+  WIFI_DATA,
+} from '#shared/opcodes';
+import { Packet, Sensors, SysInfo } from '#shared/interfaces';
 import { MQTTSettings } from 'interfaces';
 import { picoIn, picoOut, PUBLIC_IN, PUBLIC_OUT } from '#shared/mqttUtils';
+import { COMM, ESP, PICO, PRIVATE, PUBLIC, Routes } from '#shared/routes';
 
 
 export default class Module {
@@ -13,6 +38,10 @@ export default class Module {
   host: SysInfo;
   mqttSettings: MQTTSettings;
   client: MqttClient;
+  connected = false;
+  state: { power: boolean; hddactivity: boolean[]; };
+  heartbeat: NodeJS.Timer;
+  fakeHDDActivity: NodeJS.Timer;
 
   constructor(host: SysInfo, mqttSettings: MQTTSettings) {
     this.mqtt_id = `emu_${hash(host.name)}`;
@@ -21,6 +50,11 @@ export default class Module {
     this.host = host;
     this.mqttSettings = mqttSettings;
 
+    this.state = {
+      power: false,
+      hddactivity: Array.from({ length: 100 }, () => false),
+    };
+
     this.client = connect(`mqtt://${this.mqttSettings.ip}`, {
       clientId: this.mqtt_id,
       username: this.mqttSettings.login,
@@ -28,14 +62,26 @@ export default class Module {
     });
 
     this.client.subscribe(picoIn(this.mqtt_id));
-
     this.client.subscribe(PUBLIC_IN);
 
     this.client.on('message', this.handleMessage.bind(this));
-    this.client.on('connect', this.sendPong.bind(this));
-    this.client.on('reconnect', this.sendPong.bind(this));
+    this.client.on('connect', this.registerComm.bind(this));
+    this.client.on('reconnect', this.registerComm.bind(this));
 
     this.client.on('error', this.log.bind(this));
+
+    this.heartbeat = setInterval(() => {
+      if (!this.client.connected) return;
+
+      this.routePacket(PING, ESP, COMM, getUniq(), PRIVATE);
+    }, 5000);
+
+    this.fakeHDDActivity = setInterval(() => {
+      this.state.hddactivity.shift();
+
+      const chances = this.state.hddactivity[99] ? 0.6 : 0.3;
+      this.state.hddactivity.push(Math.random() < chances);
+    }, 100);
   }
 
   private log(message: unknown, ...args: unknown[]) {
@@ -43,36 +89,82 @@ export default class Module {
   }
 
   private handleMessage(topic: string, message: Buffer) {
-    const [opcode, , ...data] = unpackData(message);
-    this.log(topic, Opcodes[opcode], data);
+    let p: Packet | undefined;
 
-    const outTopic = topic === PUBLIC_IN ? PUBLIC_OUT : picoOut(this.mqtt_id);
+    try {
+      const packet = unpackData(message);
+      p = packet;
+      this.log(topic, '=>',
+        Opcodes[packet.opcode as number] ?? `INVALID_OPCODE[${packet.opcode}]`,
+        Routes[packet.origin as number] ?? `INVALID_SOURCE[${packet.origin}]`,
+        Routes[packet.destination as number] ?? `INVALID_DESTINATION[${packet.destination}]`,
+        packet.uniq,
+        Routes[packet.channel as number] ?? `INVALID_CHANNEL[${packet.channel}]`,
+        packet.data,
+      );
 
+      switch (packet.opcode) {
+        case PING:
+          this.routePacket(PONG, packet.destination, packet.origin, packet.uniq, packet.channel);
+          break;
+        case PONG:
+          break;
 
-    switch (opcode) {
-      case PING:
-        this.sendPong();
-        break;
-      case COMM_POWER:
-        this.log('Power');
-        break;
-      case COMM_RESET:
-        this.log('Reset');
-        break;
-      case GET_SENSORS:
-        this.client.publish(picoOut(this.mqtt_id), packDataAuto(SENSOR_DATA, data[0], ...flatten(this.getFakeSensors(timeNow()))));
-        break;
-      case GET_SYSINFO:
-        this.client.publish(picoOut(this.mqtt_id), packDataAuto(SYSINFO_DATA, data[0], JSON.stringify(this.host)));
-        break;
-      case GET_WIFI:
-        this.client.publish(picoOut(this.mqtt_id), packDataAuto(WIFI_DATA, data[0], this.getFakeSignalPower()));
-        break;
+        case COMM_POWER:
+          this.state.power = !this.state.power;
+          this.routePacket(OK, packet.destination, packet.origin, packet.uniq, packet.channel);
+          break;
+        case COMM_RESET:
+          this.log('Reset');
+          this.routePacket(OK, packet.destination, packet.origin, packet.uniq, packet.channel);
+          break;
+
+        case GET_SENSORS:
+          this.routePacket(SENSOR_DATA, packet.destination, packet.origin, packet.uniq, packet.channel, ...flatten(this.getFakeSensors(timeNow())));
+          break;
+        case GET_SYSINFO:
+          this.routePacket(SYSINFO_DATA, packet.destination, packet.origin, packet.uniq, packet.channel, JSON.stringify(this.host));
+          break;
+        case GET_WIFI:
+          this.routePacket(WIFI_DATA, packet.destination, packet.origin, packet.uniq, packet.channel, this.getFakeSignalPower(timeNow()));
+          break;
+        case GET_POWER_STATUS:
+          this.routePacket(POWER_STATUS_DATA, packet.destination, packet.origin, packet.uniq, packet.channel, this.state.power);
+          break;
+        case GET_HDD_ACTIVITY:
+          this.routePacket(HDD_ACTIVITY_DATA, packet.destination, packet.origin, packet.uniq, packet.channel, ...this.state.hddactivity);
+          break;
+        case GET_AMBIENT_TEMP:
+          this.routePacket(AMBIENT_TEMP_DATA, packet.destination, packet.origin, packet.uniq, packet.channel, this.getFakeAmbientTemp(timeNow()));
+          break;
+
+        case REGISTER:
+          this.connected = false;
+          this.registerComm();
+          break;
+        case REGISTERED:
+          this.log('Registered');
+          this.connected = true;
+          break;
+
+        default:
+          this.routePacket(ERR_UNSUPPORTED_OPCODE, packet.destination, packet.origin, packet.uniq, packet.channel);
+          break;
+      }
+    } catch (err) {
+      this.log(topic, '=>', p, 'ERROR', err);
     }
   }
 
-  private sendPong() {
-    this.client.publish(PUBLIC_OUT, packDataAuto(Opcodes.PONG, this.mqtt_id, JSON.stringify(this.host)));
+  private routePacket(opcode: Opcodes, origin: Routes, destination: Routes, uniq: number, channel: Routes, ...data: (string | number | boolean)[]) {
+    const packet = packData(opcode, destination, origin, uniq, channel, ...data);
+    const topic = destination === PUBLIC ? PUBLIC_OUT : picoOut(this.mqtt_id);
+
+    this.client.publish(topic, packet);
+  }
+
+  private registerComm() {
+    this.routePacket(REGISTRATION_DATA, ESP, COMM, getUniq(), PUBLIC, this.mqtt_id, JSON.stringify(this.host));
   }
 
   private get systemSpecs() {
@@ -201,14 +293,14 @@ export default class Module {
       cpu_usage: cpuUsage,
       ram_freq: 1200 + hashInt(this.host.name + 'freq') % 10 * 200,
       // eslint-disable-next-line max-len
-      ram_used: clampCeil(Math.ceil(this.host.ramTotal / 1_048_576), Math.round(((2048 + (((1.002 ** (((hashInt(hashInt(this.host.cpuName) + Math.floor(offset / 360)) % 1500) + 2000)))) / 1200) * this.host.ramTotal) + (cpuUsage / 100 * this.host.ramTotal)) / 1_048_576)),
+      ram_used: clampCeil(Math.ceil(this.host.ramTotal), Math.round(((2048 + (((1.002 ** (((hashInt(hashInt(this.host.cpuName) + Math.floor(offset / 360)) % 1500) + 2000)))) / 1200) * this.host.ramTotal) + (cpuUsage / 100 * this.host.ramTotal)))),
       cpus: distCpuLoad(cpuUsage),
       drives: range(this.host.drives.length).map((i) => ({
         read: drive_read(i),
         write: drive_write(i),
       })),
       smart: range(this.host.drives.length).map((i) => ({
-        usage: Math.max(drive_read(i) / specs.drives[i].max_read * 100, drive_write(i) / specs.drives[i].max_write * 100),
+        temp: 25 + (cpuTemp / 15) + (hashInt(offset + this.host.drives[i].name + i.toString()) % 10),
         life: specs.drives[i].has_life ? specs.drives[i].starting_life - Math.floor(offsetRAW / 360 / scale) : -1,
         warning: 0,
         failure: 0,
@@ -239,5 +331,13 @@ export default class Module {
 
 
     return power > 0.45 ? 3 : (power > -0.45 ? 2 : 1);
+  }
+
+  private getFakeAmbientTemp(offsetRAW = 0): number {
+    const scale = 5;
+    const x = (offsetRAW + hashInt(this.host.name + this.host.cpuName + this.host.arch)) / (9 * Math.PI) / scale;
+
+
+    return 20 + (((Math.sin(x - Math.sin(x))) / 0.4) + Math.cos(x / 2)) / 5;
   }
 }
