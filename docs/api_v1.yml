@@ -1,0 +1,452 @@
+openapi: 3.0.2
+info:
+  title: Pico-IPMI
+  description: First version of fleet-commander API
+  version: 0.0.1
+servers:
+  - url: http://localhost/v1
+    variables: {}
+    description: Local test server
+tags:
+  - name: sensors
+    description: Represents all sensor data providers
+  - name: modules
+    description: Represents all module data providers
+  - name: commands
+    description: Represents all commands
+  - name: leds
+    description: Represents all led data providers
+paths:
+  /sensors/wifi:
+    get:
+      summary: Returns list containing Wi-Fi stats
+      operationId: getWiFiSatus
+      parameters:
+        - name: module
+          description: Names of modules to query data from
+          in: query
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              default: ""
+      responses:
+        "200":
+          description: Array of Wi-Fi objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        module:
+                          type: string
+                          example: module_name
+                        data:
+                          $ref: "#/components/schemas/Wi-Fi"
+        "405":
+          description: Internal error
+      tags:
+        - sensors
+  /sensors/ambient:
+    get:
+      summary: Returns list containing ambient temperatures
+      operationId: getAmbientTemps
+      parameters:
+        - name: module
+          description: Names of modules to query data from
+          in: query
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              default: ""
+      responses:
+        "200":
+          description: Array of AmbientTemp objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        module:
+                          type: string
+                          example: module_name
+                        data:
+                          $ref: "#/components/schemas/AmbientTemp"
+        "405":
+          description: Internal error
+      tags:
+        - sensors
+  /sensors/host:
+    get:
+      summary: Returns list containing host sensors
+      operationId: getHostSensors
+      parameters:
+        - name: module
+          description: Names of modules to query data from
+          in: query
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              default: ""
+      responses:
+        "200":
+          description: Array of HostSensors objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        module:
+                          type: string
+                          example: module_name
+                        data:
+                          $ref: "#/components/schemas/HostSensors"
+        "405":
+          description: Internal error
+      tags:
+        - sensors
+  /modules:
+    get:
+      summary: Returns list of connected modules
+      operationId: getModules
+      parameters:
+        - name: module
+          description: Names of modules to query data from
+          in: query
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              default: ""
+      responses:
+        "200":
+          description: Array of Module objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        module:
+                          type: string
+                          example: module_name
+                        data:
+                          $ref: "#/components/schemas/Module"
+        "405":
+          description: Internal error
+      tags:
+        - modules
+  /modules/sysinfo:
+    get:
+      summary: Returns list of host configurations
+      operationId: getSysInfo
+      parameters:
+        - name: module
+          description: Names of modules to query data from
+          in: query
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              default: ""
+      responses:
+        "200":
+          description: Array of SysInfo objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        module:
+                          type: string
+                          example: module_name
+                        data:
+                          $ref: "#/components/schemas/SysInfo"
+        "405":
+          description: Internal error
+      tags:
+        - modules
+  /commands/power/:module:
+    post:
+      summary: Sends power command to module
+      description: ""
+      operationId: commandPower
+      responses:
+        "200":
+          description: Operation successfull
+        "401":
+          description: Module not found
+      tags:
+        - commands
+  /commands/reset/:module:
+    post:
+      summary: Sends reset command to module
+      description: ""
+      operationId: commandReset
+      responses:
+        "200":
+          description: Operation successfull
+        "401":
+          description: Module not found
+      tags:
+        - commands
+  /commands/sleep/:module:
+    post:
+      summary: Sends sleep command to module
+      description: ""
+      operationId: commandSleep
+      responses:
+        "200":
+          description: Operation successfull
+        "401":
+          description: Module not found
+      tags:
+        - commands
+  /leds/power/:
+    get:
+      summary: Returns status of power LED
+      operationId: getPowerLED
+      parameters:
+        - name: module
+          description: Names of modules to query data from
+          in: query
+          required: true
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              default: ""
+      responses:
+        "200":
+          description: Array of PowerLED objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        module:
+                          type: string
+                          example: module_name
+                        data:
+                          $ref: "#/components/schemas/PowerLED"
+        "405":
+          description: Internal error
+      tags:
+        - leds
+  /leds/hdd/:
+    get:
+      summary: Returns status of HDD LED
+      operationId: getHDDLED
+      parameters:
+        - name: module
+          description: Names of modules to query data from
+          in: query
+          required: true
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              default: ""
+      responses:
+        "200":
+          description: Array of HDDLED objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        module:
+                          type: string
+                          example: module_name
+                        data:
+                          $ref: "#/components/schemas/HDDLED"
+        "405":
+          description: Internal error
+      tags:
+        - leds
+components:
+  schemas:
+    Wi-Fi:
+      type: number
+    AmbientTemp:
+      type: number
+    HostSensors:
+      type: object
+      properties:
+        batt_charge:
+          type: number
+        batt_level:
+          type: number
+        batt_time:
+          type: number
+        bclk:
+          type: number
+        cpu_fan:
+          type: number
+        cpu_power:
+          type: number
+        cpu_temp:
+          type: number
+        cpu_usage:
+          type: number
+        ram_freq:
+          type: number
+        ram_used:
+          type: number
+        cpus:
+          type: array
+          items:
+            type: number
+        drives:
+          type: array
+          items:
+            type: object
+            properties:
+              read:
+                type: number
+              write:
+                type: number
+        smart:
+          type: array
+          items:
+            type: object
+            properties:
+              temp:
+                type: number
+              life:
+                type: number
+              warning:
+                type: number
+              failure:
+                type: number
+              reads:
+                type: number
+              writes:
+                type: number
+        networkInterfaces:
+          type: array
+          items:
+            type: object
+            properties:
+              up:
+                type: number
+              dl:
+                type: number
+        gpus:
+          type: array
+          items:
+            type: object
+            properties:
+              usage:
+                type: number
+              mem_used:
+                type: number
+              temp:
+                type: number
+    SysInfo:
+      type: object
+      properties:
+        arch:
+          type: string
+        cpuCores:
+          type: number
+        cpuName:
+          type: string
+        cpuThreads:
+          type: number
+        drives:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+        gpus:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              vram:
+                type: number
+        name:
+          type: string
+        networkInterfaces:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+        os:
+          type: string
+        ramTotal:
+          type: number
+    Module:
+      type: object
+      properties:
+        name:
+          type: string
+        data:
+          $ref: "#/components/schemas/SysInfo"
+    PowerLED:
+      type: number
+      maximum: 1
+      minimum: 0
+    HDDLED:
+      type: array
+      items:
+        type: number
+        maximum: 1
+        minimum: 0
+        maxItems: 100
+        minItems: 100
