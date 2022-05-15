@@ -100,3 +100,7 @@ export const extractFilename = (file: string): string => {
   const filename = path.basename(file);
   return filename.substring(0, filename.length - path.extname(file).length);
 };
+
+export const arrayFrom = <T>(variable: T[] | T): T[] => {
+  return Array.isArray(variable) ? variable.slice() : [variable];
+};
