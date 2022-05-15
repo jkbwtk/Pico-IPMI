@@ -238,7 +238,7 @@ paths:
           description: Module not found
       tags:
         - commands
-  /leds/power/:
+  /leds/power:
     get:
       summary: Returns status of power LED
       operationId: getPowerLED
@@ -275,7 +275,7 @@ paths:
           description: Internal error
       tags:
         - leds
-  /leds/hdd/:
+  /leds/hdd:
     get:
       summary: Returns status of HDD LED
       operationId: getHDDLED
