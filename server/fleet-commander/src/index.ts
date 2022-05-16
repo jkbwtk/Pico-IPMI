@@ -2,35 +2,48 @@ require('module-alias/register');
 
 import config from './config';
 import express from 'express';
-import { invalidRoute, logger } from './middlewares';
-import moduleRouter from './routers/modules';
-import sensorRouter from './routers/sensors';
-import sysinfoRouter from './routers/sysinfo';
-import wifiRouter from './routers/wifi';
-import powerStatusRouter from './routers/powerStatus';
-import hddActivityRouter from './routers/hddActivity';
-import powerRouter from './routers/power';
-import resetRouter from './routers/reset';
-import sleepRouter from './routers/sleep';
-import ambientTempRouter from './routers/ambientTemp';
-
-const api = express();
+import { accessControl, invalidRoute, logger } from './middlewares';
+import v1Router from './routers/v1';
+import { readdirSync } from 'fs';
+import { join } from 'path';
+import { extractFilename } from '#shared/utils';
+import { Express } from 'express-serve-static-core';
 
 
-api.use(logger);
-api.use('/modules', moduleRouter);
-api.use('/sensors', sensorRouter);
-api.use('/sysinfo', sysinfoRouter);
-api.use('/wifi', wifiRouter);
-api.use('/powerstatus', powerStatusRouter);
-api.use('/hddactivity', hddActivityRouter);
-api.use('/power', powerRouter);
-api.use('/reset', resetRouter);
-api.use('/sleep', sleepRouter);
-api.use('/ambientTemp', ambientTempRouter);
+const loadRoutes = async (api: Express) => {
+  const files = readdirSync(join(__dirname, 'routers'))
+    .filter((file) => file.endsWith('.js'));
 
 
-api.use(invalidRoute);
+  const routes = Promise.all(files.map(async (file) => {
+    const module = await import(join(__dirname, 'routers', file));
+    const route = '/' + extractFilename(file);
+
+    console.log(module);
+    api.use(route, module.default);
+
+    return route;
+  }));
 
 
-api.listen(config.api.port);
+  return routes;
+};
+
+
+const main = async () => {
+  const api = express();
+
+
+  api.use(logger);
+  api.use(accessControl);
+
+  api.use('/v1', v1Router);
+
+  api.use(invalidRoute);
+
+
+  api.listen(config.api.port);
+};
+
+
+main();

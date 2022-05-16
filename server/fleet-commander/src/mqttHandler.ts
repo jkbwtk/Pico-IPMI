@@ -33,6 +33,7 @@ import { ModuleData, Request } from './interfaces';
 import config from './config';
 import { extractModuleName, picoIn, picoOut, PUBLIC_IN, PUBLIC_OUT } from '#shared/mqttUtils';
 import { COMM, ESP, HOST, PICO, PRIVATE, PUBLIC, Routes } from '#shared/routes';
+import { ModuleNotFound, RequestTimeout, UnsuportedOpcode } from './errors';
 
 type OpcodeHandler = (topic: string, packet: Packet) => void;
 
@@ -116,6 +117,10 @@ const handleMessage = (topic: string, message: Buffer): void => {
 
       case OK:
         handleOk(topic, packet);
+        break;
+
+      case ERR_UNSUPPORTED_OPCODE:
+        handleErrUnsupportedOpcode(topic, packet);
         break;
 
       default:
@@ -311,10 +316,17 @@ const handleOk: OpcodeHandler = (topic: string, packet: Packet) => {
   requests.delete(packet.uniq);
 };
 
+const handleErrUnsupportedOpcode: OpcodeHandler = (topic: string, packet: Packet) => {
+  const request = requests.get(packet.uniq);
+  if (request === undefined) return;
+
+  request.reject(new UnsuportedOpcode(packet.opcode));
+};
+
 const writePacket = (packet: Buffer, targetRAW?: string) => {
   let target = PUBLIC_IN;
   if (targetRAW !== undefined) {
-    if (!modules.has(targetRAW)) throw new Error('MODULE NOT FOUND');
+    if (!modules.has(targetRAW)) throw new ModuleNotFound(targetRAW);
     target = picoIn(targetRAW);
   }
 
@@ -326,7 +338,7 @@ const writePacket = (packet: Buffer, targetRAW?: string) => {
 const makeRequest = async <T>(opcode: Opcodes, destination: Routes, targetRAW?: string) => {
   let target = PUBLIC_IN;
   if (targetRAW !== undefined) {
-    if (!modules.has(targetRAW)) throw new Error('MODULE NOT FOUND');
+    if (!modules.has(targetRAW)) throw new ModuleNotFound(targetRAW);
     target = picoIn(targetRAW);
   }
 
@@ -363,7 +375,7 @@ const requestTimeout = (topic: string, uniq: number, packet: Buffer): void => {
     if (request.retries >= config.mqtt.requestRetries) {
       console.log(`Request [${uniq}] failed, running cleanup`);
       requests.delete(uniq);
-      request.reject(new Error('Request timed out'));
+      request.reject(new RequestTimeout(uniq));
       return;
     }
 
@@ -401,7 +413,7 @@ export const getSensors = async (target?: string): Promise<{ name: string; data:
 export const getModule = (target?: string): {name: string, data: ModuleData}[] => {
   if (target !== undefined) {
     const module = modules.get(target);
-    if (module === undefined) throw new Error('MODULE NOT FOUND');
+    if (module === undefined) throw new ModuleNotFound(target);
 
     return [{ name: target, data: module }];
   }

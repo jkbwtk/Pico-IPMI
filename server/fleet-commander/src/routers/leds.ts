@@ -1,27 +1,27 @@
-import { SysInfo } from '#shared/interfaces';
 import { arrayFrom } from '#shared/utils';
 import { InvalidParams, ModuleNotFound, RequestTimeout, UnsuportedOpcode } from '../errors';
 import { Router } from 'express';
-import { ModuleData } from '../interfaces';
-import { getModule, getSysInfo } from '../mqttHandler';
+import { getHDDActivity, getPowerStatus } from '../mqttHandler';
 
 // eslint-disable-next-line new-cap
 const router = Router();
 export default router;
 
 
-router.get('/', async (req, res) => {
+router.get('/power', async (req, res) => {
   try {
     const target = arrayFrom(req.query.module);
-    const data: { name: string; data: ModuleData; }[] = [];
+    const data: { name: string; data: number; }[] = [];
 
-    target.map(async (module) => {
-      // validate arguments
-      if (typeof module !== 'string' && module !== undefined) throw new InvalidParams('Module name must be a string');
+    await Promise.all(
+      target.map(async (module) => {
+        // validate arguments
+        if (typeof module !== 'string' && module !== undefined) throw new InvalidParams('Module name must be a string');
 
-      // unwrap data
-      data.push(...getModule(module));
-    });
+        // unwrap data
+        data.push(...(await getPowerStatus(module)));
+      }),
+    );
 
     res.json({ data: data });
   } catch (err) {
@@ -35,11 +35,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-
-router.get('/sysinfo', async (req, res) => {
+router.get('/hdd', async (req, res) => {
   try {
     const target = arrayFrom(req.query.module);
-    const data: { name: string; data: SysInfo; }[] = [];
+    const data: { name: string; data: number[]; }[] = [];
 
     await Promise.all(
       target.map(async (module) => {
@@ -47,7 +46,7 @@ router.get('/sysinfo', async (req, res) => {
         if (typeof module !== 'string' && module !== undefined) throw new InvalidParams('Module name must be a string');
 
         // unwrap data
-        data.push(...(await getSysInfo(module)));
+        data.push(...(await getHDDActivity(module)));
       }),
     );
 
