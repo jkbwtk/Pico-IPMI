@@ -50,8 +50,16 @@ paths:
                           example: module_name
                         data:
                           $ref: "#/components/schemas/Wi-Fi"
-        "405":
-          description: Internal error
+        "400":
+          description: Invalid parameters
+        "404":
+          description: Module not found
+        "501":
+          description: Unsupported Opcode
+        "500":
+          description: Internal Server Error
+        "504":
+          description: Request Timed Out
       tags:
         - sensors
   /sensors/ambient:
@@ -87,8 +95,16 @@ paths:
                           example: module_name
                         data:
                           $ref: "#/components/schemas/AmbientTemp"
-        "405":
-          description: Internal error
+        "400":
+          description: Invalid parameters
+        "404":
+          description: Module not found
+        "501":
+          description: Unsupported Opcode
+        "500":
+          description: Internal Server Error
+        "504":
+          description: Request Timed Out
       tags:
         - sensors
   /sensors/host:
@@ -124,8 +140,16 @@ paths:
                           example: module_name
                         data:
                           $ref: "#/components/schemas/HostSensors"
-        "405":
-          description: Internal error
+        "400":
+          description: Invalid parameters
+        "404":
+          description: Module not found
+        "501":
+          description: Unsupported Opcode
+        "500":
+          description: Internal Server Error
+        "504":
+          description: Request Timed Out
       tags:
         - sensors
   /modules:
@@ -161,8 +185,16 @@ paths:
                           example: module_name
                         data:
                           $ref: "#/components/schemas/Module"
-        "405":
-          description: Internal error
+        "400":
+          description: Invalid parameters
+        "404":
+          description: Module not found
+        "501":
+          description: Unsupported Opcode
+        "500":
+          description: Internal Server Error
+        "504":
+          description: Request Timed Out
       tags:
         - modules
   /modules/sysinfo:
@@ -198,8 +230,16 @@ paths:
                           example: module_name
                         data:
                           $ref: "#/components/schemas/SysInfo"
-        "405":
-          description: Internal error
+        "400":
+          description: Invalid parameters
+        "404":
+          description: Module not found
+        "501":
+          description: Unsupported Opcode
+        "500":
+          description: Internal Server Error
+        "504":
+          description: Request Timed Out
       tags:
         - modules
   /commands/power/:module:
@@ -210,8 +250,14 @@ paths:
       responses:
         "200":
           description: Operation successfull
-        "401":
+        "404":
           description: Module not found
+        "501":
+          description: Unsupported Opcode
+        "500":
+          description: Internal Server Error
+        "504":
+          description: Request Timed Out
       tags:
         - commands
   /commands/reset/:module:
@@ -222,8 +268,14 @@ paths:
       responses:
         "200":
           description: Operation successfull
-        "401":
+        "404":
           description: Module not found
+        "501":
+          description: Unsupported Opcode
+        "500":
+          description: Internal Server Error
+        "504":
+          description: Request Timed Out
       tags:
         - commands
   /commands/sleep/:module:
@@ -234,8 +286,14 @@ paths:
       responses:
         "200":
           description: Operation successfull
-        "401":
+        "404":
           description: Module not found
+        "501":
+          description: Unsupported Opcode
+        "500":
+          description: Internal Server Error
+        "504":
+          description: Request Timed Out
       tags:
         - commands
   /leds/power:
@@ -271,8 +329,17 @@ paths:
                           example: module_name
                         data:
                           $ref: "#/components/schemas/PowerLED"
-        "405":
-          description: Internal error
+        "400":
+          description: Invalid parameters
+        "404":
+          description: Module not found
+        "501":
+          description: Unsupported Opcode
+        "500":
+          description: Internal Server Error
+        "504":
+          description: Request Timed Out
+
       tags:
         - leds
   /leds/hdd:
@@ -308,8 +375,16 @@ paths:
                           example: module_name
                         data:
                           $ref: "#/components/schemas/HDDLED"
-        "405":
-          description: Internal error
+        "400":
+          description: Invalid parameters
+        "404":
+          description: Module not found
+        "501":
+          description: Unsupported Opcode
+        "500":
+          description: Internal Server Error
+        "504":
+          description: Request Timed Out
       tags:
         - leds
 components:
