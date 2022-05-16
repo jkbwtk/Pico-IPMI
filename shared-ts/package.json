@@ -5,7 +5,8 @@
   "main": "build/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "convert": "npx tsc && node ./build/converter"
+    "convert": "npx tsc src/converter.ts --outDir build --esModuleInterop true && node ./build/converter",
+    "build": "npm run convert && npx tsc"
   },
   "author": "Seviter",
   "license": "ISC",
